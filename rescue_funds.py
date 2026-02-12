@@ -37,6 +37,40 @@ def get_ghost_address():
     ghost = "0x" + clean.zfill(64)
     return ghost
 
+from starknet_py.net.full_node_client import FullNodeClient
+from starknet_py.net.models import StarknetChainId
+import asyncio
+
+async def check_starknet_balance(address: str):
+    rpc_url = os.getenv("STARKNET_MAINNET_URL") or os.getenv("STARKNET_RPC_URL")
+    if not rpc_url:
+        print("Error: STARKNET_RPC_URL not found in env.")
+        return 0.0
+        
+    client = FullNodeClient(node_url=rpc_url)
+    
+    # ETH token address on Starknet
+    eth_address = "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+    
+    try:
+        # balanceOf call
+        from starknet_py.hash.selector import get_selector_from_name
+        from starknet_py.net.client_models import Call
+        
+        call = Call(
+            to_addr=int(eth_address, 16),
+            selector=get_selector_from_name("balanceOf"),
+            calldata=[int(address, 16)]
+        )
+        res = await client.call_contract(call)
+        low = res[0]
+        # eth is low / 10**18
+        eth = low / 10**18
+        return eth
+    except Exception as e:
+        print(f"Error fetching balance via starknet-py: {e}")
+        return 0.0
+
 def find_funds():
     ghost = get_ghost_address()
     if not ghost:
@@ -47,19 +81,21 @@ def find_funds():
                           f"EVM Base: {os.getenv('TRANSIT_EVM_ADDRESS')}\n"
                           f"Starknet Ghost: [green]{ghost}[/green]"))
     
-    strategy = RefiningStrategy(dry_run=True)
-    try:
-        wei = strategy.starknet.get_eth_balance(ghost)
-        eth = wei / 1e18
-        console.print(f"💰 [bold]Ghost Balance:[/bold] [green]{eth:.6f} ETH[/green]")
-        
-        if eth > 0:
-            console.print("[yellow]✨ Funds detected! You can now run --sweep[/yellow]")
-        else:
-            console.print("[dim]No funds detected yet. Bridge may be pending...[/dim]")
-            
-    except Exception as e:
-        console.print(f"[red]Error checking ghost balance: {e}[/red]")
+    eth = asyncio.run(check_starknet_balance(ghost))
+    console.print(f"💰 [bold]Ghost Balance:[/bold] [green]{eth:.6f} ETH[/green]")
+    
+    if eth > 0.001:
+        console.print("[yellow]✨ Funds detected! You can now run --sweep[/yellow]")
+    else:
+        console.print("[dim]No funds detected yet. Bridge may be pending...[/dim]")
+
+async def execute_sweep(ghost_addr, target_addr, priv_key):
+    # This part is complex because it depends on whether an account is deployed.
+    # If the ghost address is an EOA, we might need a specific provider.
+    # For now, we verify the balance. Actual sweep requires account deployment or 
+    # a cross-chain recovery tool if it's a contract-less address.
+    console.print("[yellow]Sweep execution pending final address verification.[/yellow]")
+    pass
 
 def sweep_funds():
     ghost = get_ghost_address()
@@ -67,24 +103,14 @@ def sweep_funds():
     priv_key = os.getenv("TRANSIT_EVM_PRIVATE_KEY")
     
     if not ghost or not target or not priv_key:
-        console.print("[red]❌ Missing required env variables (TRANSIT_EVM_ADDRESS, STARKNET_WALLET_ADDRESS, TRANSIT_EVM_PRIVATE_KEY)[/red]")
+        console.print("[red]❌ Missing required env variables[/red]")
         return
 
     console.print(Panel.fit(f"[bold red]🧹 INITIATING GHOST SWEEP[/bold red]\n"
                           f"From: {ghost}\n"
                           f"To: {target}"))
     
-    console.print("[yellow]⚠️  Note: This requires the Ghost Address to be an EOA-compatible account on Starknet.[/yellow]")
-    console.print("[dim]Simulating transfer... (Real sweep logic matches orchestrator logic)[/dim]")
-    
-    # In a real scenario, we'd use the EVM private key to sign a Starknet transaction.
-    # For now, we report the plan and check if user wants to proceed with actual signing.
-    
-    strategy = RefiningStrategy(dry_run=True)
-    # Placeholder for actual sweep execution
-    console.print("[cyan]Sweep Logic:[/cyan] Sending [bold]ALL[/bold] ETH from Ghost -> Game Wallet.")
-    
-    # We will implement the actual Secp256k1 signing once funds are confirmed.
+    asyncio.run(execute_sweep(ghost, target, priv_key))
 
 if __name__ == "__main__":
     load_env()
@@ -93,6 +119,4 @@ if __name__ == "__main__":
     elif "--sweep" in sys.argv:
         sweep_funds()
     else:
-        console.print("Usage: python rescue_funds.py [--find | --sweep]")
-        # Auto-run find to be helpful
         find_funds()
