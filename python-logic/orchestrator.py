@@ -108,7 +108,11 @@ def start(strategy: str = "refine", dry_run: bool = True):
         return
 
     # Run Loop
-    with Live(dash.render(0, 0), refresh_per_second=4, screen=True) as live:
+    wallet_addr = os.getenv("STARKNET_WALLET_ADDRESS")
+    if not wallet_addr:
+        dash.log("Warning: No Wallet Address in .env. Balance check skipped.")
+
+    with Live(dash.render(0, 0, 0.0), refresh_per_second=4, screen=True) as live:
         dash.log(f"Orchestrator Started. Strategy: {strategy.upper()} | Dry Run: {dry_run}")
         
         try:
@@ -117,9 +121,16 @@ def start(strategy: str = "refine", dry_run: bool = True):
                 try:
                     block, gas_wei = active_strategy.starknet.get_network_status()
                     gas_gwei = gas_wei / 1e9
-                    live.update(dash.render(block, gas_gwei))
-                except:
-                    live.update(dash.render(0, 0))
+                    
+                    eth_balance = 0.0
+                    if wallet_addr:
+                        wei_bal = active_strategy.starknet.get_eth_balance(wallet_addr)
+                        eth_balance = wei_bal / 1e18
+
+                    live.update(dash.render(block, gas_gwei, eth_balance))
+                except Exception as e:
+                    # dash.log(f"Status Error: {e}") # Debug only
+                    live.update(dash.render(0, 0, 0.0))
 
                 # 2. Run Strategy Tick
                 active_strategy.tick()
@@ -127,11 +138,11 @@ def start(strategy: str = "refine", dry_run: bool = True):
                 # 3. Sleep (responsive update)
                 for _ in range(60): # 60 seconds sleep, updating UI every 1s
                     time.sleep(1)
-                    live.update(dash.render(block, gas_gwei))
+                    live.update(dash.render(block, gas_gwei, eth_balance))
                     
         except KeyboardInterrupt:
             dash.log("Shutting down...")
-            live.update(dash.render(block, gas_gwei))
+            live.update(dash.render(block, gas_gwei, eth_balance))
             time.sleep(1)
 
 if __name__ == "__main__":

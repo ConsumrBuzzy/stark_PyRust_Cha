@@ -117,12 +117,34 @@ def run_ghost_scanner():
     
     # ---------------------------------------------------------
 
+    # --- ADR-037: Capital Detection ---
+    wallet = os.getenv("STARKNET_WALLET_ADDRESS")
+    capital_pass = False
+    eth_balance = 0.0
+    
+    if wallet:
+        try:
+            wei = sn_client.get_eth_balance(wallet)
+            eth_balance = wei / 1e18
+            # Threshold: $12.00 ~ 0.0048 ETH. Let's say 0.004 safe.
+            if eth_balance > 0.004:
+                capital_pass = True
+        except: pass
+    
+    console.print(f"\n💰 [bold]Wallet Balance:[/bold] {eth_balance:.6f} ETH")
+
     console.print(f"\n⛽ [bold]Network Status:[/bold] Gas: {gas_gwei:.2f} Gwei | Block: {block}")
     
     if gross_profit > 150.0 and calibration_pass: 
-        console.print(Panel("[bold green]✅ READY FOR RECRUITMENT[/bold green]\n"
-                            "1. Profit Margin confirmed (> 150 SWAY).\n"
-                            "2. Direct Recruit is cheaper than Secondary Market.", style="green"))
+        if capital_pass:
+            console.print(Panel("[bold green]✅ CAPITAL DETECTED. PROCEED TO RECRUITMENT.[/bold green]\n"
+                                "1. Profit Margin confirmed.\n"
+                                "2. Direct Recruit optimal.\n"
+                                "3. Funds Ready.", style="green"))
+        else:
+            console.print(Panel("[bold yellow]⚠️  Recruitment Viable but NO CAPITAL[/bold yellow]\n"
+                                "Margins good, but Wallet < $12.00.\n"
+                                "Run 'onramp.py' first.", style="yellow"))
     else:
          console.print(Panel("[bold red]⛔ NO-GO SIGNAL[/bold red]\nEither margins thin OR Secondary market cheaper.", style="red"))
 

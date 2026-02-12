@@ -21,15 +21,16 @@ class Dashboard:
         self.roi_current = 0.0
         self.roi_target = 15.0 # $15.00
 
-    def generate_header(self, block, gas_gwei):
+    def generate_header(self, block, gas_gwei, eth_balance=0.0):
         grid = Table.grid(expand=True)
         grid.add_column(justify="left", ratio=1)
         grid.add_column(justify="right", ratio=1)
         
         risk_color = "green" if gas_gwei < 30 else "red"
+        bal_color = "green" if eth_balance > 0.001 else "red"
         
         grid.add_row(
-            f"🌍 [bold]stark_PyRust_Chain[/bold] | Block: [blue]{block}[/blue]",
+            f"🌍 [bold]stark_PyRust_Chain[/bold] | Block: [blue]{block}[/blue] | ETH: [{bal_color}]{eth_balance:.4f}[/{bal_color}]",
             f"⛽ Gas: [{risk_color}]{gas_gwei:.2f} Gwei[/{risk_color}] | Risk: [{risk_color}]{'LOW' if gas_gwei < 30 else 'HIGH'}[/{risk_color}]"
         )
         return Panel(grid, style="white on blue")
@@ -60,8 +61,8 @@ class Dashboard:
         usd_value = profit_sway / 1000.0 
         self.roi_current += usd_value
 
-    def render(self, block, gas_gwei):
-        self.layout["header"].update(self.generate_header(block, gas_gwei))
+    def render(self, block, gas_gwei, eth_balance=0.0):
+        self.layout["header"].update(self.generate_header(block, gas_gwei, eth_balance))
         self.layout["body"].update(self.generate_body())
         self.layout["footer"].update(self.generate_footer())
         return self.layout
