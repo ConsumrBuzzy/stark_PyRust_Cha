@@ -7,11 +7,13 @@ mod starknet_client;
 mod supply_chain;
 mod rate_limiter;
 mod influence_api;
+mod session_keys;
 
 use vault::Vault;
 use starknet_client::StarknetClient;
 use supply_chain::{SupplyChainGraph, Recipe};
 use influence_api::{InfluenceClient, Asteroid};
+use session_keys::SessionKey;
 use std::collections::HashMap;
 
 // --- PyO3 Wrappers ---
@@ -109,12 +111,33 @@ impl PyInfluenceClient {
     }
     
     fn get_asteroid(&self, asteroid_id: u64) -> PyResult<String> {
-         // Returning JSON string for simplicity in Python for now
          self.rt.block_on(async {
              let asteroid = self.inner.get_asteroid(asteroid_id).await
                  .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
              serde_json::to_string(&asteroid).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
          })
+    }
+}
+
+#[pyclass]
+struct PySessionKey {
+    inner: SessionKey,
+}
+
+#[pymethods]
+impl PySessionKey {
+    #[new]
+    fn generate() -> PyResult<Self> {
+        let key = SessionKey::generate().map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+        Ok(PySessionKey { inner: key })
+    }
+
+    fn get_public_key(&self) -> String {
+        self.inner.public_key.clone()
+    }
+    
+    fn create_auth_payload(&self, master_account: &str) -> String {
+        self.inner.create_authorization_payload(master_account)
     }
 }
 
@@ -124,5 +147,6 @@ fn stark_pyrust_chain(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyStarknetClient>()?;
     m.add_class::<PySupplyChain>()?;
     m.add_class::<PyInfluenceClient>()?;
+    m.add_class::<PySessionKey>()?;
     Ok(())
 }
