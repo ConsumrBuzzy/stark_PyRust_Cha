@@ -131,10 +131,9 @@ async def get_coinbase_starknet_address():
         
     except Exception as e:
         console.print(f"[red]❌ Failed to get Coinbase Starknet address: {e}[/red]")
-        # Fallback to hardcoded address if API fails
-        fallback = "0xYOUR_FALLBACK_COINBASE_STARKNET_ADDRESS"
-        console.print(f"[yellow]⚠️ Using fallback address: {fallback}[/yellow]")
-        return fallback
+        # When API is exhausted, use a simple hardcoded address
+        console.print("[yellow]⚠️ API exhausted. Using manual address entry.[/yellow]")
+        return None  # Will trigger manual input
 
 async def execute_emergency_withdraw(target_address):
     """Atomic deploy + transfer to bypass STRK mandate"""
@@ -232,17 +231,26 @@ async def execute_emergency_withdraw(target_address):
     return await rpc_manager.call_with_rotation(_execute)
 
 if __name__ == "__main__":
-    # Get Coinbase Starknet address automatically using existing API keys
+    # Try API first, fallback to manual input
     target_address = asyncio.run(get_coinbase_starknet_address())
     
     if not target_address:
-        console.print("[red]❌ Could not retrieve Coinbase Starknet address[/red]")
-        sys.exit(1)
+        console.print(Panel.fit(
+            "[bold yellow]📝 Manual Entry Required[/bold yellow]\n"
+            "Coinbase API exhausted.\n"
+            "Please enter your Coinbase Starknet deposit address:",
+            title="Address Input"
+        ))
+        target_address = input("Coinbase Starknet Address: ").strip()
+        
+        if not target_address or not target_address.startswith("0x"):
+            console.print("[red]❌ Invalid address format[/red]")
+            sys.exit(1)
     
     console.print(Panel.fit(
-        f"[bold cyan]🎯 Auto-Detected Target[/bold cyan]\n"
+        f"[bold cyan]🎯 Extraction Target[/bold cyan]\n"
         f"Withdrawing to: {target_address}\n"
-        f"[dim]Retrieved via Coinbase CDP API[/dim]",
+        f"[dim]Ready for emergency withdrawal[/dim]",
         title="Emergency Withdraw"
     ))
     
