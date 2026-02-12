@@ -35,5 +35,24 @@ venv/
 .idea/
 .vscode/
 
+# Security - NEVER COMMIT THESE
+*.json
+*.pem
+*.key
+*.crt
+vault.bin
+recovery_kits/
+private_keys/
+secrets/
+
 # Project Specific
 *.pyd
+logs/
+*.log
+recovery_log.txt
+sentry_log.txt
+
+# Temporary files
+*.tmp
+*.bak
+.DS_Store
