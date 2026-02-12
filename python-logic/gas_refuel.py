@@ -142,14 +142,13 @@ async def execute_swap(quote):
              )
 
     # 4. Sign and Broadcast
-    console.print(f"[blue]Account Methods:[/blue] {dir(account)}")
     console.print("[yellow]🚀 Signing and broadcasting swap...[/yellow]")
     if "--confirm" not in sys.argv:
         console.print("[yellow]⚠ Simulation only. Run with --confirm to execute.[/yellow]")
         return
 
     try:
-        invoke_tx = await account.execute(calls=calls, max_fee=int(1e15)) # 0.001 ETH max fee safety
+        invoke_tx = await account.execute_v3(calls=calls, auto_estimate=True)
         console.print(f"[bold green]✨ Swap Broadcasted![/bold green]")
         console.print(f"Transaction Hash: [cyan]{hex(invoke_tx.transaction_hash)}[/cyan]")
         console.print("[dim]Waiting for inclusion...[/dim]")
