@@ -72,7 +72,7 @@ async def check_starknet_balance(address: str):
         return 0.0
 
 def find_funds():
-    verbose = "--verbose" in sys.argv
+    verbose = "--verbose" in sys.argv or "--direct-query" in sys.argv
     ghost = get_ghost_address()
     if not ghost:
         console.print("[red]❌ TRANSIT_EVM_ADDRESS not in .env[/red]")
@@ -81,6 +81,7 @@ def find_funds():
     if verbose:
         rpc_url = os.getenv("STARKNET_MAINNET_URL") or os.getenv("STARKNET_RPC_URL")
         console.print(f"[dim]Debug: Using Ghost Address {ghost}[/dim]")
+        console.print(f"[dim]Debug: Direct Query Mode Active (ERC-20 Ledger Poll)[/dim]")
         console.print(f"[dim]Debug: RPC URL: {rpc_url}[/dim]")
 
     console.print(Panel.fit(f"[bold cyan]🔍 Locating Ghost Funds[/bold cyan]\n"
@@ -88,12 +89,13 @@ def find_funds():
                           f"Starknet Ghost: [green]{ghost}[/green]"))
     
     eth = asyncio.run(check_starknet_balance(ghost))
-    console.print(f"💰 [bold]Ghost Balance:[/bold] [green]{eth:.6f} ETH[/green]")
     
-    if eth > 0.001:
+    if eth > 0:
+        console.print(f"💰 [bold green]Ghost Balance Found: {eth:.8f} ETH[/bold green]")
         console.print("[bold yellow]✨ FUNDS LANDED! You can now run --sweep[/bold yellow]")
     else:
-        console.print("[dim]No funds detected yet. Bridge may be pending...[/dim]")
+        console.print(f"💰 [bold white]Ghost Balance: {eth:.6f} ETH[/bold white]")
+        console.print("[dim]No funds detected on the ERC-20 Ledger yet. Bridge still in transit...[/dim]")
 
 async def execute_sweep(ghost_addr, target_addr, priv_key):
     rpc_url = os.getenv("STARKNET_MAINNET_URL") or os.getenv("STARKNET_RPC_URL")
