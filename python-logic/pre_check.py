@@ -65,19 +65,19 @@ def run_ghost_scanner():
     cost_lease = 50.0
     total_cost = cost_materials + cost_lease
     
-    revenue = 100 * p_steel
+    # --- ADR-040: Logistics & Inventory ---
+    # Mock Distance (In real app, fetch from SAGE)
+    distance_lots = 0 
+    logistics_cost = distance_lots * 15.0
     
-    gross_profit = revenue - total_cost
+    # Mock Inventory (In real app, fetch from SAGE)
+    inventory_full = False 
+    
+    revenue = 100 * p_steel
+    gross_profit = revenue - (total_cost + logistics_cost)
     
     # 4. Gas Estimation
-    # Assume Refine tx uses ~15,000 gas units (L2 is cheap, but let's be safe)
-    # gas_wei is usually low on Starknet (e.g. 1 Gwei = 1e9 wei).
-    # ETH Price in SWAY? We don't have it.
-    # Let's assume 1 SWAY ~ $0.0005.
-    # Gas cost in ETH... we need to convert to SWAY to compare.
-    # For now, we'll just check if Gross Profit is substantial (> 100 SWAY).
-    # And allow the user to make the final call on Gas.
-    
+    # Assume Refine tx uses ~15,000 gas units
     gas_gwei = gas_wei / 1e9
 
     # 5. Report
@@ -88,7 +88,10 @@ def run_ghost_scanner():
     grid.add_row("[dim]Iron Ore (x250):[/dim]", f"{250 * p_iron:.2f} SWAY (@ {p_iron})")
     grid.add_row("[dim]Propellant (x20):[/dim]", f"{20 * p_prop:.2f} SWAY (@ {p_prop})")
     grid.add_row("[dim]Refinery Lease:[/dim]", f"{cost_lease:.2f} SWAY")
-    grid.add_row("[bold]Total Cost:[/bold]", f"[red]{total_cost:.2f} SWAY[/red]")
+    if logistics_cost > 0:
+        grid.add_row("[dim]Logistics (Fuel/Time):[/dim]", f"[yellow]{logistics_cost:.2f} SWAY[/yellow]")
+    
+    grid.add_row("[bold]Total Cost:[/bold]", f"[red]{total_cost + logistics_cost:.2f} SWAY[/red]")
     grid.add_row("", "")
     grid.add_row("[bold]Revenue (Steel x100):[/bold]", f"[green]{revenue:.2f} SWAY[/green] (@ {p_steel})")
     grid.add_row("", "")
@@ -97,6 +100,9 @@ def run_ghost_scanner():
     grid.add_row("[bold]Projected Profit:[/bold]", f"[bold {color}]{gross_profit:.2f} SWAY[/bold {color}]")
     
     console.print(Panel(grid, title="Unit Economics (Per Batch)"))
+    
+    console.print(f"\n📦 [bold]Inventory Status:[/bold] {'[green]Space Available[/green]' if not inventory_full else '[red]FULL[/red]'}")
+
     
     # --- ADR-035: Market Calibration (Direct vs Secondary) ---
     market_direct_usd = 5.00

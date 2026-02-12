@@ -141,6 +141,19 @@ impl StarknetClient {
         Ok(balance)
     }
 
+    pub async fn get_nonce(&self, address: &str) -> Result<String> {
+        self.limiter.check().await;
+        use starknet::core::types::{BlockId, BlockTag, FieldElement};
+        
+        let provider = self.next_provider();
+        let user_address = FieldElement::from_hex_be(address).context("Invalid address format")?;
+
+        let nonce = provider.get_nonce(BlockId::Tag(BlockTag::Latest), user_address).await
+            .map_err(|e| anyhow::anyhow!("Failed to fetch nonce: {}", e))?;
+            
+        Ok(format!("{}", nonce))
+    }
+
     /// Execute a batched query (Multicall).
     pub async fn batch_query(&self, _account_address: &str, _asteroids: &[u64]) -> Result<String> {
         self.limiter.check().await;

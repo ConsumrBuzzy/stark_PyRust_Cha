@@ -171,6 +171,16 @@ def pulse(strategy: str = "refine", dry_run: bool = True):
 
     print(f"--- PULSE STARTED: Strategy={strategy.upper()} | DryRun={dry_run} ---")
     
+    # Secret Presence Check (Masked)
+    rpc = os.getenv("STARKNET_RPC_URL")
+    pk = os.getenv("STARKNET_PRIVATE_KEY")
+    inf_key = os.getenv("INFLUENCE_API_KEY")
+    
+    print(f"Secret Check:")
+    print(f"  RPC_URL: {'[CONFIGURED]' if rpc else '[MISSING]'} {f'({rpc[:8]}...)' if rpc else ''}")
+    print(f"  PRIVATE_KEY: {'[CONFIGURED]' if pk else '[MISSING]'}")
+    print(f"  INFLUENCE_KEY: {'[CONFIGURED]' if inf_key else '[MISSING]'}")
+
     # 1. Update Network Status (Log only)
     try:
         block, gas_wei = active_strategy.starknet.get_network_status()

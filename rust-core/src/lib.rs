@@ -77,6 +77,12 @@ impl PyStarknetClient {
                 .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
         })
     }
+
+    fn get_nonce(&self, address: &str) -> PyResult<String> {
+        self.rt.block_on(async {
+            self.inner.get_nonce(address).await
+        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
 }
 
 #[pyclass]

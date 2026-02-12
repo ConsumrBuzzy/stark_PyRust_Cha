@@ -38,6 +38,6 @@ jobs:
           STARKNET_RPC_URL: ${{ secrets.STARKNET_RPC_URL }}
           STARKNET_WALLET_ADDRESS: ${{ secrets.STARKNET_WALLET_ADDRESS }}
           STARKNET_PRIVATE_KEY: ${{ secrets.STARKNET_PRIVATE_KEY }}
-          # INFLUENCE_API_KEY: ${{ secrets.INFLUENCE_API_KEY }}
+          INFLUENCE_API_KEY: ${{ secrets.INFLUENCE_API_KEY }}
         run: |
           python python-logic/orchestrator.py pulse --dry-run
