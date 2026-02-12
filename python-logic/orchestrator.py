@@ -219,17 +219,24 @@ def pulse(strategy: str = "refine", dry_run: bool = True):
     rpc = os.getenv("STARKNET_RPC_URL")
     pk = os.getenv("STARKNET_PRIVATE_KEY")
     inf_key = os.getenv("INFLUENCE_API_KEY")
+    wallet = os.getenv("STARKNET_WALLET_ADDRESS")
     
     print(f"Secret Check:")
-    print(f"  RPC_URL: {'[CONFIGURED]' if rpc else '[MISSING]'} {f'({rpc[:8]}...)' if rpc else ''}")
-    print(f"  PRIVATE_KEY: {'[CONFIGURED]' if pk else '[MISSING]'}")
-    print(f"  INFLUENCE_KEY: {'[CONFIGURED]' if inf_key else '[MISSING]'}")
-
+    print(f"  RPC_URL:        {'[CONFIGURED]' if rpc else '[MISSING]'} {f'({rpc[:8]}...)' if rpc else ''}")
+    print(f"  WALLET_ADDRESS: {'[CONFIGURED]' if wallet else '[MISSING]'} {f'({wallet[:6]}...{wallet[-4:]})' if wallet else ''}")
+    print(f"  PRIVATE_KEY:    {'[CONFIGURED]' if pk else '[MISSING]'}")
+    
     # 1. Update Network Status (Log only)
     try:
         block, gas_wei = active_strategy.starknet.get_network_status()
         gas_gwei = gas_wei / 1e9
-        print(f"Network Status: Block={block} | Gas={gas_gwei:.2f} Gwei")
+        
+        balance_eth = 0.0
+        if wallet:
+             balance_wei = active_strategy.starknet.get_eth_balance(wallet)
+             balance_eth = balance_wei / 1e18
+
+        print(f"Network Status: Block={block} | Gas={gas_gwei:.2f} Gwei | Bal={balance_eth:.4f} ETH")
     except Exception as e:
         print(f"Network Status Error: {e}")
 
