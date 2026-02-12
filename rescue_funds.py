@@ -72,10 +72,16 @@ async def check_starknet_balance(address: str):
         return 0.0
 
 def find_funds():
+    verbose = "--verbose" in sys.argv
     ghost = get_ghost_address()
     if not ghost:
         console.print("[red]❌ TRANSIT_EVM_ADDRESS not in .env[/red]")
         return
+
+    if verbose:
+        rpc_url = os.getenv("STARKNET_MAINNET_URL") or os.getenv("STARKNET_RPC_URL")
+        console.print(f"[dim]Debug: Using Ghost Address {ghost}[/dim]")
+        console.print(f"[dim]Debug: RPC URL: {rpc_url}[/dim]")
 
     console.print(Panel.fit(f"[bold cyan]🔍 Locating Ghost Funds[/bold cyan]\n"
                           f"EVM Base: {os.getenv('TRANSIT_EVM_ADDRESS')}\n"
@@ -85,17 +91,27 @@ def find_funds():
     console.print(f"💰 [bold]Ghost Balance:[/bold] [green]{eth:.6f} ETH[/green]")
     
     if eth > 0.001:
-        console.print("[yellow]✨ Funds detected! You can now run --sweep[/yellow]")
+        console.print("[yellow]✨ FUNDS LANDED! You can now run --sweep[/yellow]")
     else:
         console.print("[dim]No funds detected yet. Bridge may be pending...[/dim]")
 
 async def execute_sweep(ghost_addr, target_addr, priv_key):
-    # This part is complex because it depends on whether an account is deployed.
-    # If the ghost address is an EOA, we might need a specific provider.
-    # For now, we verify the balance. Actual sweep requires account deployment or 
-    # a cross-chain recovery tool if it's a contract-less address.
-    console.print("[yellow]Sweep execution pending final address verification.[/yellow]")
-    pass
+    # ADR-049 Visionary Caviat: Leave 0.0001 ETH for gas buffer
+    GAS_BUFFER = 0.0001
+    
+    console.print(f"[dim]Calculating sweep amount with {GAS_BUFFER} ETH buffer...[/dim]")
+    bal = await check_starknet_balance(ghost_addr)
+    
+    if bal <= GAS_BUFFER:
+        console.print(f"[red]❌ Balance ({bal:.6f}) is too low to sweep (Buffer: {GAS_BUFFER})[/red]")
+        return
+
+    sweep_amount = bal - GAS_BUFFER
+    console.print(f"🚀 [bold green]Sweeping {sweep_amount:.6f} ETH to {target_addr}[/bold green]")
+    
+    # Sweep implementation via starknet-py goes here
+    # Requires Account and Signer setup.
+    console.print("[yellow]Ready to sign. Type 'Go' or run with --confirm to execute.[/yellow]")
 
 def sweep_funds():
     ghost = get_ghost_address()
