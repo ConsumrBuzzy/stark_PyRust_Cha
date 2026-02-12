@@ -7,6 +7,7 @@ Derives the Starknet 'Ghost Address' from EVM keys and sweeps funds.
 import os
 import sys
 import json
+import time
 from rich.console import Console
 from rich.panel import Panel
 
@@ -78,8 +79,8 @@ def find_funds():
         console.print("[red]❌ TRANSIT_EVM_ADDRESS not in .env[/red]")
         return
 
+    rpc_url = os.getenv("STARKNET_MAINNET_URL") or os.getenv("STARKNET_RPC_URL")
     if verbose:
-        rpc_url = os.getenv("STARKNET_MAINNET_URL") or os.getenv("STARKNET_RPC_URL")
         console.print(f"[dim]Debug: Using Ghost Address {ghost}[/dim]")
         console.print(f"[dim]Debug: Direct Query Mode Active (ERC-20 Ledger Poll)[/dim]")
         console.print(f"[dim]Debug: RPC URL: {rpc_url}[/dim]")
@@ -88,14 +89,23 @@ def find_funds():
                           f"EVM Base: {os.getenv('TRANSIT_EVM_ADDRESS')}\n"
                           f"Starknet Ghost: [green]{ghost}[/green]"))
     
-    eth = asyncio.run(check_starknet_balance(ghost))
-    
-    if eth > 0:
-        console.print(f"💰 [bold green]Ghost Balance Found: {eth:.8f} ETH[/bold green]")
-        console.print("[bold yellow]✨ FUNDS LANDED! You can now run --sweep[/bold yellow]")
-    else:
-        console.print(f"💰 [bold white]Ghost Balance: {eth:.6f} ETH[/bold white]")
-        console.print("[dim]No funds detected on the ERC-20 Ledger yet. Bridge still in transit...[/dim]")
+    # Polling Loop
+    max_tries = 10
+    for i in range(max_tries):
+        if i > 0:
+            console.print(f"[dim]Poll {i+1}/{max_tries}: Waiting 60s for settlement...[/dim]")
+            time.sleep(60)
+            
+        eth = asyncio.run(check_starknet_balance(ghost))
+        
+        if eth > 0:
+            console.print(f"💰 [bold green]Ghost Balance Found: {eth:.8f} ETH[/bold green]")
+            console.print("[bold yellow]✨ FUNDS LANDED! You can now run --sweep[/bold yellow]")
+            return
+        else:
+            console.print(f"💰 [bold white]Ghost Balance: {eth:.6f} ETH[/bold white]")
+            
+    console.print("[yellow]Sweep standby timed out. Bridge still in transit. Try again in 5 mins.[/yellow]")
 
 async def execute_sweep(ghost_addr, target_addr, priv_key):
     rpc_url = os.getenv("STARKNET_MAINNET_URL") or os.getenv("STARKNET_RPC_URL")
