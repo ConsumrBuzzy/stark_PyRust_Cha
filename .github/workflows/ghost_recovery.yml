@@ -1,0 +1,24 @@
+name: Ghost Fund Recovery
+on:
+  schedule:
+    - cron: '*/10 * * * *' # Every 10 minutes
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  rescue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install Dependencies
+        run: pip install starknet-py web3 rich
+      - name: Run Rescue Script
+        env:
+          TRANSIT_EVM_PRIVATE_KEY: ${{ secrets.TRANSIT_EVM_PRIVATE_KEY }}
+          TRANSIT_EVM_ADDRESS: ${{ secrets.TRANSIT_EVM_ADDRESS }}
+          STARKNET_WALLET_ADDRESS: ${{ secrets.STARKNET_WALLET_ADDRESS }}
+          STARKNET_MAINNET_URL: ${{ secrets.STARKNET_RPC_URL }}
+        run: python rescue_funds.py --find --sweep --verbose
