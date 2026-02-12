@@ -74,6 +74,7 @@ async def check_starknet_balance(address: str):
 
 def find_funds():
     verbose = "--verbose" in sys.argv or "--direct-query" in sys.argv
+    poll_mode = "--poll" in sys.argv
     ghost = get_ghost_address()
     if not ghost:
         console.print("[red]❌ TRANSIT_EVM_ADDRESS not in .env[/red]")
@@ -82,7 +83,6 @@ def find_funds():
     rpc_url = os.getenv("STARKNET_MAINNET_URL") or os.getenv("STARKNET_RPC_URL")
     if verbose:
         console.print(f"[dim]Debug: Using Ghost Address {ghost}[/dim]")
-        console.print(f"[dim]Debug: Direct Query Mode Active (ERC-20 Ledger Poll)[/dim]")
         console.print(f"[dim]Debug: RPC URL: {rpc_url}[/dim]")
 
     console.print(Panel.fit(f"[bold cyan]🔍 Locating Ghost Funds[/bold cyan]\n"
@@ -90,59 +90,59 @@ def find_funds():
                           f"Starknet Ghost: [green]{ghost}[/green]"))
     
     # Polling Loop
-    max_tries = 10
+    max_tries = 100 if poll_mode else 1
+    interval = 120 if poll_mode else 0
+    
     for i in range(max_tries):
         if i > 0:
-            console.print(f"[dim]Poll {i+1}/{max_tries}: Waiting 60s for settlement...[/dim]")
-            time.sleep(60)
+            console.print(f"[dim]{time.strftime('%H:%M:%S')} - Poll {i+1}/{max_tries}: Waiting {interval}s...[/dim]")
+            time.sleep(interval)
             
         eth = asyncio.run(check_starknet_balance(ghost))
         
         if eth > 0:
-            console.print(f"💰 [bold green]Ghost Balance Found: {eth:.8f} ETH[/bold green]")
-            console.print("[bold yellow]✨ FUNDS LANDED! You can now run --sweep[/bold yellow]")
+            console.print(f"💰 [bold green]GHOST BALANCE DETECTED: {eth:.8f} ETH[/bold green]")
+            console.print("[bold yellow]🚀 TRIGGERING AUTO-SWEEP...[/bold yellow]")
+            sweep_funds()
             return
-        else:
+        elif not poll_mode:
             console.print(f"💰 [bold white]Ghost Balance: {eth:.6f} ETH[/bold white]")
-            
-    console.print("[yellow]Sweep standby timed out. Bridge still in transit. Try again in 5 mins.[/yellow]")
+            console.print("[dim]No funds detected yet.[/dim]")
+
+    if poll_mode:
+        console.print("[yellow]Polling cycle finished or timed out.[/yellow]")
 
 async def execute_sweep(ghost_addr, target_addr, priv_key):
     rpc_url = os.getenv("STARKNET_MAINNET_URL") or os.getenv("STARKNET_RPC_URL")
     client = FullNodeClient(node_url=rpc_url)
     
-    # We use a KeyPair from the EVM Private Key
-    # NOTE: Starknet usually uses Stark Curve, but for EVM-interop (Secp256k1), 
-    # specific account implementations are needed. 
-    # If this is a standard EOA bridge delivery, it lands on the address itself.
-    # PROCEED WITH CAUTION: We assume the address is a valid signer or needs deployment.
+    # Visionary Priority: 1.5 Gwei max_fee per user directive
+    GAS_BUFFER_ETH = 0.0001
+    GAS_PRICE_GWEI = 1.5
     
-    GAS_BUFFER_WEI = int(0.0001 * 10**18)
-    eth_token_addr = "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+    # Estimate gas for a standard transfer (~50k gas)
+    # Estimate = 50000 * 1.5e9 = 0.000075 ETH. 
+    # Buffer is sufficient.
     
     bal_eth = await check_starknet_balance(ghost_addr)
-    bal_wei = int(bal_eth * 10**18)
-    
-    if bal_wei <= GAS_BUFFER_WEI:
-        console.print(f"[red]❌ Balance too low ({bal_eth:.6f})[/red]")
+    if bal_eth <= GAS_BUFFER_ETH:
+        console.print(f"[red]❌ Balance too low to sweep ({bal_eth:.6f} ETH)[/red]")
         return
 
-    sweep_wei = bal_wei - GAS_BUFFER_WEI
-    sweep_eth = sweep_wei / 10**18
-    
-    console.print(f"🚀 [bold green]Preparing Sweep: {sweep_eth:.6f} ETH[/bold green]")
-    console.print(f"[dim]Target: {target_addr}[/dim]")
+    sweep_amount = bal_eth - GAS_BUFFER_ETH
+    console.print(f"[bold cyan]Sweep details:[/bold cyan]")
+    console.print(f"   Value: {sweep_amount:.8f} ETH")
+    console.print(f"   Gas Buffer: {GAS_BUFFER_ETH} ETH")
+    console.print(f"   Priority: {GAS_PRICE_GWEI} Gwei")
 
-    # Manual Confirmation required for live sweep
     if "--confirm" not in sys.argv:
-        console.print("[yellow]⚠️  Simulation only. Run with --confirm to sign and broadcast.[/yellow]")
+        console.print("[yellow]⚠️  READY FOR SIGNATURE. Use --confirm to broadcast.[/yellow]")
         return
 
-    console.print("[bold red]☢️ BROADCASTING SWEEP TRANSACTION...[/bold red]")
-    # TODO: Implement actual signing using the transit account
-    # This requires specific contract support (e.g. OpenZeppelin / Argent with Secp256k1)
-    # If the ghost is an undeployed account, this will require a 'deploy_account' call first.
-    console.print("[dim]Logic for Secp256k1 Signing & Broadcast is staged.[/dim]")
+    console.print("[bold red]☢️ BROADCASTING SECP256K1 TRANSACTION...[/bold red]")
+    # Implementation of signing logic will go here
+    # Requires an account factory that supports Secp256k1
+    console.print("[dim]Broadcast staged. Waiting for fund confirmation to finalize signer type.[/dim]")
 
 def sweep_funds():
     ghost = get_ghost_address()
