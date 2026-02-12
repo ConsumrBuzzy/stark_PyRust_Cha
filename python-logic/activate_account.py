@@ -73,7 +73,7 @@ async def main():
             key_pair=key_pair,
             client=client,
             resource_bounds=resource_bounds,
-            chain=StarknetChainId.MAINNET,
+            constructor_calldata=[key_pair.public_key]
         )
         
         console.print(f"[bold green]✅ Activation Broadcast![/bold green] Hash: [cyan]{hex(deploy_result.hash)}[/cyan]")
