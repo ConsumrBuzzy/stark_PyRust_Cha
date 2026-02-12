@@ -187,8 +187,9 @@ async def execute_emergency_withdraw(target_address):
 
         try:
             if not is_deployed:
-                console.print("[yellow]🔧 Account already deployed elsewhere, proceeding with transfer...[/yellow]")
-                # Skip deployment - account should be ready for transactions
+                console.print("[red]❌ Account not deployed. Cannot proceed with transfer.[/red]")
+                console.print("[yellow]⚠️ This account needs to be deployed first via other means.[/yellow]")
+                return False
 
             # 5. Transfer ETH
             console.print(f"[yellow]🚀 Transferring {withdraw_amount:.6f} ETH to {target_address}...[/yellow]")
