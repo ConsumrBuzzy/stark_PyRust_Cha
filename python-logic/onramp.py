@@ -87,7 +87,7 @@ class CoinbaseOnramp:
             self._exchange = ccxt.coinbase({
                 'apiKey': self._api_key_name,
                 'secret': self._api_private_key,
-                'verbose': True, # Enable Verbose Logging
+                'verbose': False, # Disable Verbose Logging
                 'enableRateLimit': True,
                 'options': {
                     'defaultType': 'spot',
