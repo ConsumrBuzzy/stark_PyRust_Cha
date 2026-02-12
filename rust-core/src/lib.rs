@@ -65,6 +65,12 @@ impl PyStarknetClient {
         }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
 
+    fn get_eth_balance(&self, address: &str) -> PyResult<u128> {
+        self.rt.block_on(async {
+            self.inner.get_eth_balance(address).await
+        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+
     fn batch_query(&self, account: &str, asteroids: Vec<u64>) -> PyResult<String> {
         self.rt.block_on(async {
             self.inner.batch_query(account, &asteroids).await

@@ -110,6 +110,37 @@ impl StarknetClient {
         }
     }
 
+    pub async fn get_eth_balance(&self, address: &str) -> Result<u128> {
+        self.limiter.check().await;
+        use starknet::core::types::{BlockId, BlockTag, FunctionCall, FieldElement};
+        use starknet::core::utils::get_selector_from_name;
+        
+        let provider = self.next_provider();
+        let eth_contract = FieldElement::from_hex_be("0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7")?;
+        let selector = get_selector_from_name("balanceOf")?;
+        let user_address = FieldElement::from_hex_be(address).context("Invalid address format")?;
+
+        let call = FunctionCall {
+            contract_address: eth_contract,
+            entry_point_selector: selector,
+            calldata: vec![user_address],
+        };
+
+        let result = provider.call(call, BlockId::Tag(BlockTag::Latest)).await
+            .map_err(|e| anyhow::anyhow!("Failed to fetch balance: {}", e))?;
+            
+        // Uint256 is [low, high]
+        if result.len() < 2 {
+            return Ok(0);
+        }
+        
+        // Convert low part to u128. High part ignored (safe for < 3.4 * 10^38 Wei)
+        let low = result[0];
+        let balance: u128 = format!("{}", low).parse().unwrap_or(0);
+        
+        Ok(balance)
+    }
+
     /// Execute a batched query (Multicall).
     pub async fn batch_query(&self, _account_address: &str, _asteroids: &[u64]) -> Result<String> {
         self.limiter.check().await;
