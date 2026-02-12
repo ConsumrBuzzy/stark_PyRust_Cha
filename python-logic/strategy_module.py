@@ -58,6 +58,20 @@ class RefiningStrategy(BaseStrategy):
             block, gas_wei = self.starknet.get_network_status()
             gas_gwei = gas_wei / 1e9
             
+            # --- ADR-029: Solvency Check ---
+            import os
+            wallet = os.getenv("STARKNET_WALLET_ADDRESS")
+            if wallet:
+                wei = self.starknet.get_eth_balance(wallet)
+                eth = wei / 1e18
+                self.log(f"   Solvency: [{ 'green' if eth > 0.005 else 'red' }]{eth:.4f} ETH[/{ 'green' if eth > 0.005 else 'red' }]")
+                
+                if eth < 0.005 and not self.dry_run:
+                    self.log("[bold red]⛔ Solvency Alert: Balance < 0.005 ETH. Aborting Cycle.[/bold red]")
+                    return
+            else:
+                 self.log("[yellow]⚠️  No Wallet Address. Skipping Solvency Check.[/yellow]")
+            
             # --- ADR-041/043: Life Support & Class Affinity ---
             # Mock Crew ID: 1
             # Returns: (is_busy, busy_until, food_kg, location, class_id)
