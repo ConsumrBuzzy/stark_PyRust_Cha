@@ -27,14 +27,14 @@ def get_balance():
     payload = {
         "jsonrpc": "2.0",
         "method": "starknet_call",
-        "params": {
-            "request": {
+        "params": [
+            {
                 "contract_address": eth_token_addr,
                 "entry_point_selector": selector,
-                "calldata": [str(int(target_addr, 16))]
+                "calldata": [hex(int(target_addr, 16))]
             },
-            "block_id": "latest"
-        },
+            "latest"
+        ],
         "id": 1
     }
 
