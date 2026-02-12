@@ -63,7 +63,7 @@ def test_influence_client():
 def test_session_key():
     print("\n🔑 Testing Session Key Generation...")
     try:
-        key = stark_pyrust_chain.PySessionKey.generate()
+        key = stark_pyrust_chain.PySessionKey()
         pub = key.get_public_key()
         payload = key.create_auth_payload("0xMasterAccount")
         
