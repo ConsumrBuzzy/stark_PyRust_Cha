@@ -101,14 +101,17 @@ async def check_account_deployment(client, address):
 
 async def execute_emergency_withdraw(target_address):
     """Atomic deploy + transfer to bypass STRK mandate"""
+    # Load environment (already loaded globally, but ensuring fresh data)
     load_env()
     
     wallet_addr = os.getenv("STARKNET_WALLET_ADDRESS")
     priv_key = os.getenv("STARKNET_PRIVATE_KEY")
     
+    console.print(f"[dim]Debug: Wallet={wallet_addr}, HasKey={'Yes' if priv_key else 'No'}[/dim]")
+    
     if not wallet_addr or not priv_key:
-        console.print("[red]❌ Missing STARKNET_WALLET_ADDRESS or STARKNET_PRIVATE_KEY[/red]")
-        return
+        console.print("[red]❌ Missing STARKNET_WALLET_ADDRESS or STARKNET_PRIVATE_KEY in .env[/red]")
+        return False
 
     console.print(Panel.fit(
         f"[bold red]🚨 EMERGENCY WITHDRAW[/bold red]\n"
@@ -192,9 +195,18 @@ async def execute_emergency_withdraw(target_address):
     return await rpc_manager.call_with_rotation(_execute)
 
 if __name__ == "__main__":
-    target = sys.argv[sys.argv.index("--target") + 1] if "--target" in sys.argv else None
+    # Auto-detect target if not provided
+    target = None
+    if "--target" in sys.argv:
+        target_idx = sys.argv.index("--target") + 1
+        if target_idx < len(sys.argv):
+            target = sys.argv[target_idx]
+    
+    # Fallback to Coinbase address if no target provided
     if not target:
-        console.print("[red]❌ Usage: python emergency_withdraw.py --target 0xYourCoinbaseStarknetAddr --confirm[/red]")
+        console.print("[yellow]⚠️ No target provided. Using default Coinbase extraction.[/yellow]")
+        # You can set a default Coinbase address here or require user input
+        console.print("[red]❌ Please provide --target with your Coinbase Starknet address[/red]")
         sys.exit(1)
     
     asyncio.run(execute_emergency_withdraw(target))
