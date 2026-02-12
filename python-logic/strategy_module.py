@@ -34,7 +34,10 @@ class RefiningStrategy(BaseStrategy):
         super().__init__(dry_run)
         self.client = stark_pyrust_chain.PyInfluenceClient()
         self.graph = stark_pyrust_chain.PySupplyChain()
-        self.starknet = stark_pyrust_chain.PyStarknetClient(None)
+        # Explicitly pass URL from Env to avoid Rust-side dot-env issues
+        import os
+        rpc_url = os.getenv("STARKNET_MAINNET_URL") or os.getenv("STARKNET_RPC_URL")
+        self.starknet = stark_pyrust_chain.PyStarknetClient(rpc_url)
         
         # Load or generate Session Key (In real app, load from Vault)
         # For v0.1.0 demo, we generate a fresh one or assume it's loaded

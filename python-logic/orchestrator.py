@@ -8,6 +8,27 @@ import sys
 import json
 import time
 
+# Robust Env Loader for Windows/UTF-8 issues
+def load_env_manual():
+    env_path = ".env"
+    if not os.path.exists(env_path):
+        return
+    
+    try:
+        with open(env_path, "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    key, val = line.split("=", 1)
+                    if key.strip() not in os.environ:
+                        os.environ[key.strip()] = val.strip()
+    except Exception as e:
+        print(f"Warning: Failed to load .env manually: {e}")
+
+load_env_manual()
+
 try:
     import stark_pyrust_chain
     RUST_AVAILABLE = True
