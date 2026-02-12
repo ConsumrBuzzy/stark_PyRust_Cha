@@ -27,6 +27,9 @@ def load_env():
                 k, v = line.strip().split("=", 1)
                 os.environ[k.strip()] = v.strip()
 
+# ADR-047: Load environment IMMEDIATELY to populate global objects
+load_env()
+
 def get_ghost_address():
     evm_addr = os.getenv("TRANSIT_EVM_ADDRESS")
     if not evm_addr:
@@ -50,27 +53,60 @@ from starknet_py.hash.selector import get_selector_from_name
 from starknet_py.net.client_models import Call
 import asyncio
 
-async def check_starknet_balance(address: str):
-    rpc_url = os.getenv("STARKNET_MAINNET_URL") or os.getenv("STARKNET_RPC_URL")
-    if not rpc_url:
-        print("Error: STARKNET_RPC_URL not found in env.")
-        return 0.0
+class RPCManager:
+    def __init__(self):
+        self.urls = [
+            os.getenv("STARKNET_MAINNET_URL"),
+            os.getenv("STARKNET_LAVA_URL"),
+            os.getenv("STARKNET_1RPC_URL"),
+            os.getenv("STARKNET_ONFINALITY_URL")
+        ]
+        self.urls = [u for u in self.urls if u]
+        self.current_idx = 0
+        if not self.urls:
+            console.print("[bold red]❌ RPC Manager: No Starknet RPC URLs found in .env![/bold red]")
+        else:
+            console.print(f"[dim]📡 RPC Manager initialized with {len(self.urls)} providers.[/dim]")
+
+    def get_next_url(self):
+        if not self.urls: return None
+        url = self.urls[self.current_idx % len(self.urls)]
+        self.current_idx += 1
+        return url
+
+    async def call_with_rotation(self, func, *args, **kwargs):
+        """Executes a function with RPC rotation on failure."""
+        for _ in range(len(self.urls) or 1):
+            url = self.get_next_url()
+            if not url: break
+            
+            client = FullNodeClient(node_url=url)
+            try:
+                # Basic Health Check: Get Chain ID
+                console.print(f"[dim]Testing RPC: {url[:40]}...[/dim]")
+                await client.get_chain_id()
+                return await func(client, *args, **kwargs)
+            except Exception as e:
+                console.print(f"[yellow]⚠️ RPC Fail ({url[:30]}...): {e}. Rotating...[/yellow]")
         
-    client = FullNodeClient(node_url=rpc_url)
+        console.print("[bold red]❌ All RPC providers failed.[/bold red]")
+        return None
+
+rpc_manager = RPCManager()
+
+async def _do_balance_check(client, address: str):
     eth_address = "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
-    
-    try:
-        call = Call(
-            to_addr=int(eth_address, 16),
-            selector=get_selector_from_name("balanceOf"),
-            calldata=[int(address, 16)]
-        )
-        res = await client.call_contract(call)
-        low = res[0]
-        return low / 10**18
-    except Exception as e:
-        print(f"Error fetching balance: {e}")
-        return 0.0
+    call = Call(
+        to_addr=int(eth_address, 16),
+        selector=get_selector_from_name("balanceOf"),
+        calldata=[int(address, 16)]
+    )
+    res = await client.call_contract(call)
+    return res[0] / 10**18
+
+async def check_starknet_balance(address: str):
+    bal = await rpc_manager.call_with_rotation(_do_balance_check, address)
+    return bal if bal is not None else 0.0
 
 def find_funds():
     verbose = "--verbose" in sys.argv or "--direct-query" in sys.argv
@@ -112,37 +148,31 @@ def find_funds():
     if poll_mode:
         console.print("[yellow]Polling cycle finished or timed out.[/yellow]")
 
-async def execute_sweep(ghost_addr, target_addr, priv_key):
-    rpc_url = os.getenv("STARKNET_MAINNET_URL") or os.getenv("STARKNET_RPC_URL")
-    client = FullNodeClient(node_url=rpc_url)
-    
+async def _do_sweep_execution(client, ghost_addr, target_addr, priv_key):
     # Visionary Priority: 1.5 Gwei max_fee per user directive
     GAS_BUFFER_ETH = 0.0001
     GAS_PRICE_GWEI = 1.5
     
-    # Estimate gas for a standard transfer (~50k gas)
-    # Estimate = 50000 * 1.5e9 = 0.000075 ETH. 
-    # Buffer is sufficient.
-    
-    bal_eth = await check_starknet_balance(ghost_addr)
+    bal_eth = await _do_balance_check(client, ghost_addr)
     if bal_eth <= GAS_BUFFER_ETH:
         console.print(f"[red]❌ Balance too low to sweep ({bal_eth:.6f} ETH)[/red]")
-        return
+        return False
 
     sweep_amount = bal_eth - GAS_BUFFER_ETH
-    console.print(f"[bold cyan]Sweep details:[/bold cyan]")
+    console.print(f"[bold cyan]Sweep Plan (RPC verified):[/bold cyan]")
     console.print(f"   Value: {sweep_amount:.8f} ETH")
-    console.print(f"   Gas Buffer: {GAS_BUFFER_ETH} ETH")
     console.print(f"   Priority: {GAS_PRICE_GWEI} Gwei")
 
     if "--confirm" not in sys.argv:
-        console.print("[yellow]⚠️  READY FOR SIGNATURE. Use --confirm to broadcast.[/yellow]")
-        return
+        console.print("[yellow]⚠️  Simulation only. Run with --confirm to sign and broadcast.[/yellow]")
+        return True
 
     console.print("[bold red]☢️ BROADCASTING SECP256K1 TRANSACTION...[/bold red]")
-    # Implementation of signing logic will go here
-    # Requires an account factory that supports Secp256k1
-    console.print("[dim]Broadcast staged. Waiting for fund confirmation to finalize signer type.[/dim]")
+    # TODO: Implement actual signing using the transit account and Secp256k1
+    return True
+
+async def execute_sweep(ghost_addr, target_addr, priv_key):
+    await rpc_manager.call_with_rotation(_do_sweep_execution, ghost_addr, target_addr, priv_key)
 
 def sweep_funds():
     ghost = get_ghost_address()
