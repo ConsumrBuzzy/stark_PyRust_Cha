@@ -6,6 +6,17 @@ from starknet_py.net.models import StarknetChainId
 from starknet_py.net.signer.key_pair import KeyPair
 from starknet_py.net.client_models import ResourceBounds, ResourceBoundsMapping
 
+def load_env():
+    env_path = ".env"
+    if not os.path.exists(env_path): return
+    with open(env_path, "r", encoding="utf-8") as f:
+        for line in f:
+            if "=" in line and not line.startswith("#"):
+                k, v = line.strip().split("=", 1)
+                os.environ[k.strip()] = v.strip()
+
+load_env()
+
 async def main():
     # 1. AUTHENTICATION (Zero-Inference from .env)
     rpc_url = os.getenv("STARKNET_MAINNET_URL")
