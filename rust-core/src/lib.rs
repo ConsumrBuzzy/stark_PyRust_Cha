@@ -83,6 +83,12 @@ impl PyStarknetClient {
             self.inner.get_nonce(address).await
         }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
+
+    fn get_crew_status(&self, crew_id: u64) -> PyResult<(bool, u8)> {
+         self.rt.block_on(async {
+            self.inner.get_crew_status(crew_id).await
+        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
 }
 
 #[pyclass]

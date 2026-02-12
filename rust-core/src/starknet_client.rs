@@ -154,6 +154,19 @@ impl StarknetClient {
         Ok(format!("{}", nonce))
     }
 
+    /// Fetch Crew Status (ADR-041)
+    /// Returns: (is_busy, food_level)
+    /// Currently MOCKED for Phase 4. Needs SAGE/Contract integration.
+    pub async fn get_crew_status(&self, _crew_id: u64) -> Result<(bool, u8)> {
+        self.limiter.check().await;
+        // logic to check chain/indexer
+        // Mock: Always Ready, 100% Food
+        let is_busy = false;
+        let food_level = 100;
+        
+        Ok((is_busy, food_level))
+    }
+
     /// Execute a batched query (Multicall).
     pub async fn batch_query(&self, _account_address: &str, _asteroids: &[u64]) -> Result<String> {
         self.limiter.check().await;
