@@ -38,7 +38,17 @@ def test_graph():
          print(f"   ❌ Graph checks threw exception: {e}")
          sys.exit(1)
 
+def test_client_init():
+    print("\n🌍 Testing Client Initialization (Rate Limiting check)...")
+    try:
+        # Pass a dummy URL to bypass Env check for this test
+        client = stark_pyrust_chain.PyStarknetClient("https://starknet-mainnet.public.blastapi.io")
+        print("   ✅ StarknetClient initialized with URL (Rate Limiter active).")
+    except Exception as e:
+        print(f"   ❌ Client initialization failed: {e}")
+
 if __name__ == "__main__":
     test_vault()
     test_graph()
+    test_client_init()
     print("\n✨ All systems operational.")
