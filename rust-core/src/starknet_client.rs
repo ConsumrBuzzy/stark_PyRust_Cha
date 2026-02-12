@@ -85,14 +85,29 @@ impl StarknetClient {
         &self.providers[idx % self.providers.len()]
     }
 
-    pub async fn get_block_number(&self) -> Result<u64> {
+    pub async fn get_network_status(&self) -> Result<(u64, u128)> {
         self.limiter.check().await;
-        // Use next provider in round-robin logic
+        use starknet::core::types::{BlockId, BlockTag, MaybePendingBlockWithTxHashes};
+
         let provider = self.next_provider();
         
-        let block_number = provider.block_number().await
-            .map_err(|e| anyhow::anyhow!("Failed to fetch block number: {}", e))?;
-        Ok(block_number)
+        let block = provider.get_block_with_tx_hashes(BlockId::Tag(BlockTag::Latest)).await
+            .map_err(|e| anyhow::anyhow!("Failed to fetch block: {}", e))?;
+
+        match block {
+            MaybePendingBlockWithTxHashes::Block(b) => {
+                // l1_gas_price is FieldElement in this version.
+                // Convert via string to avoid trait complexity (Felt -> u128)
+                let gas_felt = b.l1_gas_price.price_in_wei; 
+                let gas: u128 = format!("{}", gas_felt).parse().unwrap_or(0);
+                Ok((b.block_number, gas))
+            },
+            MaybePendingBlockWithTxHashes::PendingBlock(b) => {
+                 let gas_felt = b.l1_gas_price.price_in_wei;
+                 let gas: u128 = format!("{}", gas_felt).parse().unwrap_or(0);
+                 Ok((0, gas))
+            }
+        }
     }
 
     /// Execute a batched query (Multicall).

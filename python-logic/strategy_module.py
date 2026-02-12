@@ -52,8 +52,21 @@ class RefiningStrategy(BaseStrategy):
         """
         Execute one cycle of the strategy.
         """
-        self.log("🔎 Scanning Adalia Markets...")
-        
+        # --- Safety Checks (ADR-029) ---
+        try:
+            block, gas_wei = self.starknet.get_network_status()
+            gas_gwei = gas_wei / 1e9
+            
+            self.log(f"🔎 Scanning Adalia Markets... [Block: {block} | Gas: {gas_gwei:.2f} Gwei]")
+            
+            if gas_gwei > 30.0:
+                self.log(f"[bold red]⛔ High Gas Detected ({gas_gwei:.2f} > 30.0). Yielding...[/bold red]")
+                return
+
+        except Exception as e:
+            self.log(f"⚠️ Failed to fetch network status: {e}")
+
+        # --- Market Logic ---
         # 1. Fetch Market Prices (Mocked for now as we don't have full Market API yet)
         # In real implementation: market_prices = self.client.get_market_prices(["Iron Ore", "Steel", "Fuel"])
         market_prices = {

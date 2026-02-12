@@ -59,9 +59,9 @@ impl PyStarknetClient {
         })
     }
 
-    fn get_block_number(&self) -> PyResult<u64> {
+    fn get_network_status(&self) -> PyResult<(u64, u128)> {
         self.rt.block_on(async {
-            self.inner.get_block_number().await
+            self.inner.get_network_status().await
         }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
 
@@ -127,8 +127,15 @@ impl PyInfluenceClient {
          self.rt.block_on(async {
              let asteroid = self.inner.get_asteroid(asteroid_id).await
                  .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
-             serde_json::to_string(&asteroid).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+             Ok(format!("{:?}", asteroid))
          })
+    }
+
+    fn get_market_prices(&self) -> PyResult<std::collections::HashMap<String, f64>> {
+        self.rt.block_on(async {
+            self.inner.fetch_unauthenticated_market_prices().await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
     }
 }
 
