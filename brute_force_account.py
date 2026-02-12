@@ -27,11 +27,11 @@ async def brute_force():
     hashes = {
         "OZ 0.7.0": 0x048dd51ef690f584af33dbfe2ea2cc2a4f3169147d310112444101100000000,
         "OZ 0.8.0": 0x061efe27dba2c442a6663364f93bdadd83cb51850e1d00061fa693158c23f80,
-        "OZ 0.8.1": 0x054033333333333333333333333333333333333333333333333333333333333, # Placeholder
-        "Argent Int": 0x01a736cb7361405e6088e89abcce497702d76537a80e93b0f4270219d365d6b0,
+        "Argent v0.4.0": 0x033434ad846c2d239b64bb9c65f0cb27320d1dd408d66050b1df9a0f7e44923e,
+        "Argent v0.5.0": 0x01a736cb7361405e6088e89abcce497702d76537a80e93b0f4270219d365d6b0,
         "Argent Proxy": 0x025ec026985a3bf6d08b14771408d2de02d76537a80e93b0f4270219d365d6b0,
         "Braavos Base": 0x05aa23d5bb0948726559a835a21e4c020117a298910041695493019808f9720b,
-        "Ready/Argent v0.4.0": 0x033434ad846c2d239b64bb9c65f0cb27320d1dd408d66050b1df9a0f7e44923e,
+        "Argent X (some versions)": 0x036078334509b514626504edc9fb252328d1a240e4e948bef8d0c08dff45927f
     }
 
     salts = [0, pub_key, 1]
@@ -40,7 +40,8 @@ async def brute_force():
     calldatas = [
         [pub_key],           # OZ, Braavos
         [pub_key, 0],        # Argent
-        [hashes["Argent Int"], 0x2dd76537a80e93b0f4270219d365d6b0, pub_key, 0] # Argent Proxy
+        [0, pub_key, 1],     # Argent v0.4.0 official
+        [hashes["Argent v0.5.0"], 0x2dd76537a80e93b0f4270219d365d6b0, pub_key, 0] # Argent Proxy
     ]
 
     for h_name, h_val in hashes.items():
