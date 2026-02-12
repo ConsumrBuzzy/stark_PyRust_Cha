@@ -27,22 +27,55 @@ except ImportError:
     Dashboard = None
 
 # Robust Env Loader for Windows/UTF-8 issues
+# Robust Env Loader for Windows/UTF-8/Latin-1 issues
 def load_env_manual():
     env_path = ".env"
     if not os.path.exists(env_path):
         return
+    
+    # helper to clean and set
+    def parse_line(line):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            return
+        if "=" in line:
+            key, val = line.split("=", 1)
+            key = key.strip()
+            val = val.strip()
+            # Remove inline comments if any (simple heuristic)
+            if " #" in val:
+                val = val.split(" #", 1)[0].strip()
+            if key not in os.environ:
+                os.environ[key] = val
+
+    # Try UTF-8 first
     try:
-        with open(env_path, "r", encoding="utf-8", errors="ignore") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if "=" in line:
-                    key, val = line.split("=", 1)
-                    if key.strip() not in os.environ:
-                        os.environ[key.strip()] = val.strip()
-    except Exception as e:
-        print(f"Warning: Failed to load .env manually: {e}")
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f: parse_line(line)
+    except UnicodeDecodeError:
+        # Fallback to latin-1 (reads all bytes safely)
+        print("Warning: .env has non-UTF-8 characters. Retrying with latin-1...")
+        try:
+            with open(env_path, "r", encoding="latin-1") as f:
+                for line in f: parse_line(line)
+        except Exception as e:
+            print(f"Error loading .env: {e}")
+
+    # Aliases Mapping (PhantomArbiter Style -> PyRust Style)
+    # Map Mainnet URL to RPC URL if missing
+    if "STARKNET_RPC_URL" not in os.environ:
+        for alias in ["STARKNET_MAINNET_URL", "STARKNET_LAVA_URL", "STARKNET_1RPC_URL", "ANKR_ENDPOINT"]:
+            if os.environ.get(alias):
+                os.environ["STARKNET_RPC_URL"] = os.environ[alias]
+                break
+    
+    # Map generic PRIVATE_KEY if specific one missing
+    if "STARKNET_PRIVATE_KEY" not in os.environ:
+        if "PRIVATE_KEY" in os.environ:
+            os.environ["STARKNET_PRIVATE_KEY"] = os.environ["PRIVATE_KEY"]
+        elif "SOLANA_PRIVATE_KEY" in os.environ:
+             # User re-used PhantomArbiter .env structure
+             os.environ["STARKNET_PRIVATE_KEY"] = os.environ["SOLANA_PRIVATE_KEY"]
 
 load_env_manual()
 

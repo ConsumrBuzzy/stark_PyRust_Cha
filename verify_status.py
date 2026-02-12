@@ -8,6 +8,30 @@ except ImportError as e:
     print(f"❌ Import failed: {e}")
     sys.exit(1)
 
+# Robust Env Loader
+def load_env_manual():
+    env_path = ".env"
+    if not os.path.exists(env_path): return
+    try:
+        # Try UTF-8 then Latin-1
+        lines = []
+        try:
+            with open(env_path, "r", encoding="utf-8") as f: lines = f.readlines()
+        except UnicodeDecodeError:
+            with open(env_path, "r", encoding="latin-1") as f: lines = f.readlines()
+            
+        for line in lines:
+            if line.strip() and not line.strip().startswith("#") and "=" in line:
+                key, val = line.strip().split("=", 1)
+                if key.strip() not in os.environ: os.environ[key.strip()] = val.strip()
+                
+        # Aliases
+        if "STARKNET_RPC_URL" not in os.environ:
+             for alias in ["STARKNET_MAINNET_URL", "STARKNET_LAVA_URL"]:
+                 if os.environ.get(alias): os.environ["STARKNET_RPC_URL"] = os.environ[alias]; break
+    except: pass
+
+load_env_manual()
 console = Console()
 
 def verify_status():
