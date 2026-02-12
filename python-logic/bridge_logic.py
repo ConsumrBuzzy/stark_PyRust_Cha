@@ -117,7 +117,7 @@ class OrbiterBridge:
             gas_price = self.w3.eth.gas_price
             
             tx = {
-                'to': ORBITER_MAKER_BASE,
+                'to': self.w3.to_checksum_address(ORBITER_MAKER_BASE),
                 'value': final_wei,
                 'gas': 23000, # Simple Transfer is 21000, padding slightly
                 'gasPrice': gas_price,
@@ -128,7 +128,7 @@ class OrbiterBridge:
             signed_tx = self.w3.eth.account.sign_transaction(tx, self.private_key)
             console.print("[yellow]🚀 Broadcasting to Base Network...[/yellow]")
             
-            tx_hash = self.w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+            tx_hash = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
             console.print(f"[green]✅ Bridge Tx Sent! Hash: {self.w3.to_hex(tx_hash)}[/green]")
             console.print("[dim]Wait ~2 mins for funds to arrive on Starknet.[/dim]")
             
