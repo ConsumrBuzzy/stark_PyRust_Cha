@@ -77,6 +77,9 @@ class CoinbaseOnramp:
 
     async def _ensure_exchange(self):
         if self._exchange is None:
+            console.print(f"DEBUG: Key Name: {self._api_key_name[:10]}...")
+            console.print(f"DEBUG: Private Key: {self._api_private_key[:10]}... (Len: {len(self._api_private_key)})")
+            
             if not self._api_key_name or not self._api_private_key:
                 console.print("[red]❌ Coinbase CDP credentials not configured.[/red]")
                 return None
@@ -84,6 +87,7 @@ class CoinbaseOnramp:
             self._exchange = ccxt.coinbase({
                 'apiKey': self._api_key_name,
                 'secret': self._api_private_key,
+                'verbose': True, # Enable Verbose Logging
                 'enableRateLimit': True,
                 'options': {
                     'defaultType': 'spot',
@@ -98,6 +102,9 @@ class CoinbaseOnramp:
             exchange = await self._ensure_exchange()
             if not exchange: return 0.0
             
+            # Load markets first to ensure connectivity
+            # await exchange.load_markets() 
+            
             balance = await exchange.fetch_balance()
             asset_bal = balance.get(asset, {})
             free = float(asset_bal.get('free', 0.0))
@@ -107,68 +114,59 @@ class CoinbaseOnramp:
             return free
         except Exception as e:
             console.print(f"[red]❌ Balance fetch error: {e}[/red]")
+            import traceback
+            traceback.print_exc()
             return 0.0
 
     async def bridge_funds(self):
         console.print(Panel.fit("[bold blue]🌉 Coinbase -> Starknet Bridge[/bold blue]"))
-        
-        # 0. Validate Target
-        if not self._starknet_address:
-            console.print("[red]❌ Target Wallet not configured (STARKNET_WALLET_ADDRESS).[/red]")
-            return
+        try:
+            # 0. Validate Target
+            if not self._starknet_address:
+                console.print("[red]❌ Target Wallet not configured (STARKNET_WALLET_ADDRESS).[/red]")
+                return
 
-        # 1. Check ETH Balance (Primary Gas Token)
-        eth_bal = await self.get_balance("ETH")
-        
-        # Calculate Value in USD (approx) or just use ETH amount
-        # For simplicity, assuming ETH price $2600. 0.005 ETH ~ $13.
-        target_amount = 0.005 # ~ $13
-        
-        if eth_bal < target_amount:
-            console.print(f"[yellow]⚠️  Low ETH Balance ({eth_bal:.4f} < {target_amount}). Checking USDC...[/yellow]")
-            # TODO: Implement USDC -> ETH swap if needed? 
-            # For now, just abort if no ETH.
-            console.print("[red]⛔ Insufficient ETH on Coinbase. Buy ETH first.[/red]")
+            # 1. Check ETH Balance (Primary Gas Token)
+            eth_bal = await self.get_balance("ETH")
+            
+            # ... (Rest of logic) ...
+            target_amount = 0.005 # ~ $13
+            
+            if eth_bal < target_amount:
+                console.print(f"[yellow]⚠️  Low ETH Balance ({eth_bal:.4f} < {target_amount}). Checking USDC...[/yellow]")
+                
+                # Check USDC
+                usdc_bal = await self.get_balance("USDC")
+                if usdc_bal > 15.0:
+                     console.print(f"[green]💰 Found ${usdc_bal:.2f} USDC. (Swap logic not implemented yet)[/green]")
+                     # Note: Requires swap. For now just report.
+                
+                console.print("[red]⛔ Insufficient ETH on Coinbase. Buy ETH first.[/red]")
+                return
+
+            amount = eth_bal - 0.001 
+            # ... execution ...
+            if amount < 0.001: 
+                 console.print("[red]⛔ Available amount too small.[/red]")
+                 return
+
+            console.print(f"   🎯 Target: {self._starknet_address}")
+            console.print(f"   💸 Bridging: {amount:.4f} ETH -> Starknet")
+
+            if self.dry_run:
+                console.print(Panel(f"Simulating Withdrawal:\nAsset: ETH\nAmount: {amount:.4f}\nNetwork: {self.ALLOWED_NETWORK}", title="[DRY RUN]"))
+            else:
+                # ... (Execution logic) ...
+                try:
+                    exchange = await self._ensure_exchange()
+                    params = {'network': self.ALLOWED_NETWORK}
+                    console.print(f"[yellow]🚀 Sending {amount:.4f} ETH to Starknet...[/yellow]")
+                    withdrawal = await exchange.withdraw('ETH', amount, self._starknet_address, params=params)
+                    console.print(f"[green]✅ Withdrawal Initialized! ID: {withdrawal.get('id')}[/green]")
+                except Exception as e:
+                     console.print(f"[bold red]❌ Withdrawal Failed: {e}[/bold red]")
+        finally:
             await self.close()
-            return
-
-        amount = eth_bal - 0.001 # Leave some dust for fees/floor
-        if amount < 0.001: 
-             console.print("[red]⛔ Available amount too small.[/red]")
-             await self.close()
-             return
-
-        console.print(f"   🎯 Target: {self._starknet_address}")
-        console.print(f"   💸 Bridging: {amount:.4f} ETH -> Starknet")
-
-        if self.dry_run:
-            console.print(Panel(f"Simulating Withdrawal:\nAsset: ETH\nAmount: {amount:.4f}\nNetwork: {self.ALLOWED_NETWORK}", title="[DRY RUN]"))
-        else:
-            # Execute
-            try:
-                exchange = await self._ensure_exchange()
-                params = {'network': self.ALLOWED_NETWORK}
-                
-                console.print(f"[yellow]🚀 Sending {amount:.4f} ETH to Starknet...[/yellow]")
-                
-                # Check if exchange supports 'starknet' network for ETH
-                # Note: Coinbase API network names can be tricky. 'starknet' is likely correct if supported.
-                # If this fails, user might need to use L1 'ethereum' and bridge manually.
-                
-                withdrawal = await exchange.withdraw(
-                    code='ETH',
-                    amount=amount,
-                    address=self._starknet_address,
-                    params=params
-                )
-                
-                console.print(f"[green]✅ Withdrawal Initialized! ID: {withdrawal.get('id')}[/green]")
-                
-            except Exception as e:
-                 console.print(f"[bold red]❌ Withdrawal Failed: {e}[/bold red]")
-                 console.print("[dim]Use 'ethereum' network (L1) if 'starknet' is not supported directly.[/dim]")
-
-        await self.close()
 
     async def close(self):
         if self._exchange:
