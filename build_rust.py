@@ -14,11 +14,21 @@ def main():
     if sys.prefix == sys.base_prefix:
         print("⚠️  Warning: Not running in a virtual environment.")
         
+    # Manually set VIRTUAL_ENV if it's not set
+    # This helps maturin detect the environment when running via full path
+    env = os.environ.copy()
+    if "VIRTUAL_ENV" not in env:
+        venv_path = project_root / "venv"
+        env["VIRTUAL_ENV"] = str(venv_path)
+        env["PATH"] = str(venv_path / "Scripts") + os.pathsep + env["PATH"]
+        print(f"🔧 Manually injecting VIRTUAL_ENV={venv_path}")
+
     try:
         # Build with Maturin
-        # Using --release for optimized build, remove for debug
         cmd = [sys.executable, "-m", "maturin", "develop", "--release"]
-        subprocess.check_call(cmd)
+        
+        print(f"   Executing: {' '.join(cmd)}")
+        subprocess.check_call(cmd, env=env)
         print("✅ Rust extension built and installed successfully.")
         
     except subprocess.CalledProcessError as e:
