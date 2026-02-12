@@ -56,18 +56,20 @@ def debug():
     console.print(f"Target Addr: {target_addr.lower()}")
 
     # Common Class Hashes
-    # OpenZeppelin v0.8.0/0.8.1
     OZ_CLASS_HASH = 0x061efe27dba2c442a6663364f93bdadd83cb51850e1d00061fa693158c23f80 
-    # Argent X v0.2.3+ Proxy
-    ARGENT_PROXY_HASH = 0x025ec026985a3bf6d08b14771408d2de02d76537a80e93b0f4270219d365d6b0
-    # Argent X v0.3.0+ Implementation
     ARGENT_IMPL_HASH = 0x01a736cb7361405e6088e89abcce497702d76537a80e93b0f4270219d365d6b0
+    ARGENT_PROXY_HASH = 0x025ec026985a3bf6d08b14771408d2de02d76537a80e93b0f4270219d365d6b0
+    BRAAVOS_HASH_V1 = 0x03131103324a134412219985844431e5f8f8fbda9c3169147d31011244410110
+    BRAAVOS_HASH_BASE = 0x05aa23d5bb0948726559a835a21e4c020117a298910041695493019808f9720b
 
     classes = [
         ("OpenZeppelin (salt=pub_key)", OZ_CLASS_HASH, pub_key, [pub_key]),
         ("OpenZeppelin (salt=0)", OZ_CLASS_HASH, 0, [pub_key]),
-        ("Argent (salt=pub_key)", ARGENT_IMPL_HASH, pub_key, [pub_key, 0]),
-        ("Argent (salt=0)", ARGENT_IMPL_HASH, 0, [pub_key, 0]),
+        ("Argent Account (salt=pub_key)", ARGENT_IMPL_HASH, pub_key, [pub_key, 0]),
+        ("Argent Account (salt=0)", ARGENT_IMPL_HASH, 0, [pub_key, 0]),
+        ("Argent Proxy (salt=pub_key)", ARGENT_PROXY_HASH, pub_key, [ARGENT_IMPL_HASH, 0x2dd76537a80e93b0f4270219d365d6b0, pub_key, 0]),
+        ("Braavos (salt=pub_key)", BRAAVOS_HASH_BASE, pub_key, [pub_key]),
+        ("Braavos (salt=0)", BRAAVOS_HASH_BASE, 0, [pub_key]),
     ]
 
     found = False
