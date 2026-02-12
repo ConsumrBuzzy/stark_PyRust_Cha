@@ -99,6 +99,35 @@ async def check_account_deployment(client, address):
     except:
         return False
 
+async def get_coinbase_starknet_address():
+    """Get Coinbase Starknet deposit address using CDP API"""
+    try:
+        from cdp import Wallet, Cdp
+        
+        # Setup CDP using existing credentials
+        api_key_name = os.getenv("COINBASE_CLIENT_API_KEY")
+        api_key_private = os.getenv("COINBASE_API_PRIVATE_KEY")
+        
+        if not api_key_name or not api_key_private:
+            console.print("[red]❌ Coinbase CDP credentials not found[/red]")
+            return None
+            
+        Cdp.configure(api_key_name, api_key_private.replace("\\n", "\n"))
+        
+        # Get existing wallet or create one
+        wallets = list(Wallet.list())
+        wallet = next((w for w in wallets if w.network_id == "starknet-mainnet"), None)
+        
+        if not wallet:
+            console.print("[yellow]⚠️ No Starknet wallet found. Creating new one...[/yellow]")
+            wallet = Wallet.create(network_id="starknet-mainnet")
+        
+        return wallet.default_address.address
+        
+    except Exception as e:
+        console.print(f"[red]❌ Failed to get Coinbase Starknet address: {e}[/red]")
+        return None
+
 async def execute_emergency_withdraw(target_address):
     """Atomic deploy + transfer to bypass STRK mandate"""
     # Load environment (already loaded globally, but ensuring fresh data)
@@ -195,13 +224,17 @@ async def execute_emergency_withdraw(target_address):
     return await rpc_manager.call_with_rotation(_execute)
 
 if __name__ == "__main__":
-    # Simple hardcoded target - no API keys or environment variables needed
-    target_address = "0xYOUR_COINBASE_STARKNET_ADDRESS_HERE"  # EDIT THIS LINE ONLY
+    # Get Coinbase Starknet address automatically using existing API keys
+    target_address = asyncio.run(get_coinbase_starknet_address())
+    
+    if not target_address:
+        console.print("[red]❌ Could not retrieve Coinbase Starknet address[/red]")
+        sys.exit(1)
     
     console.print(Panel.fit(
-        f"[bold cyan]🎯 Extraction Target[/bold cyan]\n"
+        f"[bold cyan]🎯 Auto-Detected Target[/bold cyan]\n"
         f"Withdrawing to: {target_address}\n"
-        f"[dim]Edit line 199 in script to set your address[/dim]",
+        f"[dim]Retrieved via Coinbase CDP API[/dim]",
         title="Emergency Withdraw"
     ))
     
