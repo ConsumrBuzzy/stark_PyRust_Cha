@@ -115,20 +115,33 @@ async def execute_swap(quote):
 
     # 3. Parse Calls
     calls = []
-    for call in build_data['calls']:
+    if 'calls' in build_data:
+        for call in build_data['calls']:
+            calls.append(Call(
+                to_addr=int(call['contractAddress'], 16),
+                selector=int(call['entrypoint'], 16) if isinstance(call['entrypoint'], str) and call['entrypoint'].startswith("0x") else call['entrypoint'],
+                calldata=[int(x, 16) for x in call['calldata']]
+            ))
+    elif 'contractAddress' in build_data:
         calls.append(Call(
-            to_addr=int(call['contractAddress'], 16),
-            selector=int(call['entrypoint'], 16) if isinstance(call['entrypoint'], str) and call['entrypoint'].startswith("0x") else call['entrypoint'],
-            calldata=[int(x, 16) for x in call['calldata']]
+            to_addr=int(build_data['contractAddress'], 16),
+            selector=int(build_data['entrypoint'], 16) if isinstance(build_data['entrypoint'], str) and build_data['entrypoint'].startswith("0x") else build_data['entrypoint'],
+            calldata=[int(x, 16) for x in build_data['calldata']]
         ))
     
-    # Fix entrypoint if it's a string name (AVNU usually gives selectors)
+    if not calls:
+        console.print("[red]❌ No calls found in build data.[/red]")
+        return
+    
+    # Fix entrypoint if it's a string name
     from starknet_py.hash.selector import get_selector_from_name
     for i, call in enumerate(calls):
-        if isinstance(build_data['calls'][i]['entrypoint'], str) and not build_data['calls'][i]['entrypoint'].startswith("0x"):
+        # We need to check the original data for entrypoint type
+        orig_call = build_data['calls'][i] if 'calls' in build_data else build_data
+        if isinstance(orig_call['entrypoint'], str) and not orig_call['entrypoint'].startswith("0x"):
              calls[i] = Call(
                  to_addr=call.to_addr,
-                 selector=get_selector_from_name(build_data['calls'][i]['entrypoint']),
+                 selector=get_selector_from_name(orig_call['entrypoint']),
                  calldata=call.calldata
              )
 
