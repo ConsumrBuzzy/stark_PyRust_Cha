@@ -21,9 +21,9 @@ async def check():
 
     client = FullNodeClient(node_url=rpc_url)
     # ETH Contract Address on Starknet
-    eth_address = "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+    eth_address = int(os.getenv("STARKNET_ETH_TOKEN_ADDRESS", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)
     # Derived Starknet equivalent of Transit EVM Wallet
-    ghost_address = "0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463"
+    ghost_address = os.getenv("GHOST_ADDRESS", "0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463")
     
     print(f"--- Direct Starknet RPC Query ---")
     print(f"Target: {ghost_address}")

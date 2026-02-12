@@ -16,5 +16,5 @@ def verify_tx(tx_hash):
         print(f"⌛ PENDING or NOT FOUND: {e}")
 
 if __name__ == "__main__":
-    h = "0x2dec7c24a1b11c731a25fd8c7c2e681488e0c58730ba82f9d20d46032a263407"
+    h = os.getenv("BASE_TX_HASH", "0x2dec7c24a1b11c731a25fd8c7c2e681488e0c58730ba82f9d20d46032a263407")
     verify_tx(h)

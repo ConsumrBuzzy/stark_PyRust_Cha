@@ -18,7 +18,7 @@ def get_balance():
     load_env()
     rpc_url = os.getenv("STARKNET_MAINNET_URL")
     target_addr = os.getenv("STARKNET_WALLET_ADDRESS")
-    eth_token_addr = "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+    eth_token_addr = int(os.getenv("STARKNET_ETH_TOKEN_ADDRESS", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)
 
     # balanceOf selector (keccak256("balanceOf(address)")) 
     # But in Starknet it's the sn_keccak of 'balanceOf'
