@@ -53,7 +53,6 @@ async def main():
             client=client,
             constructor_calldata=[key_pair.public_key],
             resource_bounds=resource_bounds,
-            chain=StarknetChainId.MAINNET,
         )
         
         print(f"✅ Transaction Hash: {hex(deploy_result.hash)}")
