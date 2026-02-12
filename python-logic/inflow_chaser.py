@@ -1,13 +1,6 @@
-"""
-ADR-060: Inflow Chaser (CDP SDK)
-================================
-Automates gasless USDC transfer from Coinbase to Phantom (Base)
-using the Coinbase Developer Platform (CDP) SDK.
-"""
-
 import os
 import sys
-from cdp import Wallet, Coinbase, Cdp
+from cdp import Wallet, Cdp
 from rich.console import Console
 
 console = Console()
@@ -30,8 +23,8 @@ def setup_cdp():
         console.print("[red]❌ CDP API credentials missing in .env[/red]")
         return False
         
-    # Standard CDP configuration
     try:
+        # Standard CDP configuration for v0.21.0+
         Cdp.configure(api_key_name, api_key_private.replace("\\n", "\n"))
         return True
     except Exception as e:
@@ -41,29 +34,33 @@ def setup_cdp():
 def send_chaser_usdc(amount=15.00):
     if not setup_cdp(): return
     
-    # Use your existing Phantom EVM Address from .env
     phantom_addr = os.getenv("TRANSIT_EVM_ADDRESS")
     if not phantom_addr:
         console.print("[red]❌ TRANSIT_EVM_ADDRESS not found in .env[/red]")
         return
 
-    console.print(f"[blue]🚀 Initiating $15 USDC Gasless Transfer to {phantom_addr}...[/blue]")
+    console.print(f"[blue]🚀 Initiating $[bold]{amount}[/bold] USDC Gasless Transfer to {phantom_addr}...[/blue]")
     
     try:
-        # Create/Load a temporary or persisted CDP wallet
-        # For simplicity, we create a new one, but for industrial use, we'd load a fixed wallet.
-        wallet = Wallet.create(network_id="base-mainnet")
+        # Reuse existing wallet if available to bypass CreateWallet rate limits
+        wallets = list(Wallet.list())
+        wallet = next((w for w in wallets if w.network_id == "base-mainnet"), None)
         
-        # Note: This assumes the CDP wallet has balance. 
-        # If withdrawing from Coinbase 'Main' account to Phantom:
+        if not wallet:
+            console.print("[yellow]⚠ No existing Base Mainnet wallet found. Attempting to create one...[/yellow]")
+            wallet = Wallet.create(network_id="base-mainnet")
+        else:
+            console.print(f"[green]✅ Reusing existing CDP Wallet: {wallet.id}[/green]")
+        
+        # In v0.21.0, transfer takes (amount, asset_id, destination, gasless)
         transfer = wallet.transfer(
             amount, 
-            Coinbase.assets.usdc, 
+            "usdc", 
             phantom_addr, 
             gasless=True
         ).wait()
         
-        console.print(f"[bold green]✅ $15 USDC landed on Phantom (Base).[/bold green]")
+        console.print(f"[bold green]✅ USDC landed on Phantom (Base).[/bold green]")
         console.print(f"Hash: {transfer.transaction_hash}")
         
     except Exception as e:
