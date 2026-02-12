@@ -119,7 +119,7 @@ class OrbiterBridge:
             tx = {
                 'to': self.w3.to_checksum_address(ORBITER_MAKER_BASE),
                 'value': final_wei,
-                'gas': 23000, # Simple Transfer is 21000, padding slightly
+                'gas': 100000, # Increased for contract-based Orbiter Maker (prev 23k)
                 'gasPrice': gas_price,
                 'nonce': nonce,
                 'chainId': 8453
