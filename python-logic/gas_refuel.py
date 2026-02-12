@@ -20,6 +20,20 @@ def load_env():
             if "=" in line and not line.startswith("#"):
                 k, v = line.strip().split("=", 1)
                 os.environ[k.strip()] = v.strip()
+    
+    # Logic from orchestrator.py for robust mapping
+    if "STARKNET_PRIVATE_KEY" not in os.environ:
+        if "PRIVATE_KEY" in os.environ:
+            os.environ["STARKNET_PRIVATE_KEY"] = os.environ["PRIVATE_KEY"]
+        elif "SOLANA_PRIVATE_KEY" in os.environ:
+            # Fallback for PhantomArbiter users
+            os.environ["STARKNET_PRIVATE_KEY"] = os.environ["SOLANA_PRIVATE_KEY"]
+            
+    if "STARKNET_RPC_URL" not in os.environ:
+        for alias in ["STARKNET_MAINNET_URL", "STARKNET_LAVA_URL", "STARKNET_1RPC_URL"]:
+            if os.environ.get(alias):
+                os.environ["STARKNET_RPC_URL"] = os.environ[alias]
+                break
 
 def get_swap_quote(amount_eth=0.002):
     url = "https://starknet.api.avnu.fi/swap/v1/quotes"
