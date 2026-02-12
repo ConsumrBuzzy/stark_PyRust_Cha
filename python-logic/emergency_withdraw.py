@@ -195,13 +195,13 @@ async def execute_emergency_withdraw(target_address):
     return await rpc_manager.call_with_rotation(_execute)
 
 if __name__ == "__main__":
-    # Use default Coinbase Starknet address - no target argument needed
-    target_address = "0xYOUR_COINBASE_STARKNET_ADDRESS_HERE"  # Update this once
+    # Try to get Coinbase Starknet address from environment, fallback to placeholder
+    target_address = os.getenv("COINBASE_STARKNET_ADDRESS") or os.getenv("COINBASE_STARKNET_DEPOSIT_ADDRESS") or "0xYOUR_COINBASE_STARKNET_ADDRESS_HERE"
     
     console.print(Panel.fit(
         f"[bold cyan]🎯 Target Configuration[/bold cyan]\n"
         f"Withdrawing to: {target_address}\n"
-        f"[dim]Edit target_address in script to change destination[/dim]",
+        f"[dim]Set COINBASE_STARKNET_ADDRESS in .env to auto-configure[/dim]",
         title="Extraction Target"
     ))
     
