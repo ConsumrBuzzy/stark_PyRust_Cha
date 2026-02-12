@@ -206,11 +206,7 @@ async def execute_emergency_withdraw(target_address):
             # Use ETH for gas to bypass STRK requirement
             invoke_tx = await account.execute_v3(
                 calls=[transfer_call],
-                auto_estimate=True,
-                l1_resource_bounds={
-                    "max_amount": int(0.005 * 10**18),  # 0.005 ETH max
-                    "max_price_per_unit": int(20 * 10**9)  # 20 gwei max
-                }
+                auto_estimate=True
             )
 
             console.print(f"[bold green]✨ WITHDRAWAL BROADCASTED![/bold green]")
