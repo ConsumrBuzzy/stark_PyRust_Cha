@@ -142,6 +142,7 @@ async def execute_swap(quote):
              )
 
     # 4. Sign and Broadcast
+    console.print(f"[blue]Account Methods:[/blue] {dir(account)}")
     console.print("[yellow]🚀 Signing and broadcasting swap...[/yellow]")
     if "--confirm" not in sys.argv:
         console.print("[yellow]⚠ Simulation only. Run with --confirm to execute.[/yellow]")
