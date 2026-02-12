@@ -9,8 +9,15 @@ from starknet_py.net.client_models import ResourceBounds, ResourceBoundsMapping
 async def main():
     # 1. AUTHENTICATION (Zero-Inference from .env)
     rpc_url = os.getenv("STARKNET_MAINNET_URL")
-    private_key = int(os.getenv("STARKNET_PRIVATE_KEY"), 16)
-    target_address = int(os.getenv("STARKNET_WALLET_ADDRESS"), 16)
+    private_key_str = os.getenv("STARKNET_PRIVATE_KEY")
+    target_address_str = os.getenv("STARKNET_WALLET_ADDRESS")
+    
+    if not private_key_str or not target_address_str:
+        print("❌ Missing STARKNET_PRIVATE_KEY or STARKNET_WALLET_ADDRESS in .env")
+        return
+    
+    private_key = int(private_key_str, 16)
+    target_address = int(target_address_str, 16)
     
     client = FullNodeClient(node_url=rpc_url)
     key_pair = KeyPair.from_private_key(private_key)
