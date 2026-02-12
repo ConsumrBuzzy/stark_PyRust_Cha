@@ -24,10 +24,8 @@ def find_recovery_recipe():
     
     target_addr = 0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9
     
-    private_key_str = os.getenv("STARKNET_PRIVATE_KEY")
-    if not private_key_str:
-        return {"STATUS": "FAILED", "HINT": "Missing STARKNET_PRIVATE_KEY in .env"}
-    
+    # Use the provided private key directly
+    private_key_str = "0x06d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b"
     pk = int(private_key_str, 16)
     pub = KeyPair.from_private_key(pk).public_key
     
