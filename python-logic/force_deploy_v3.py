@@ -17,6 +17,8 @@ def load_env():
 
 load_env()
 
+from starknet_py.hash.address import compute_address
+
 async def main():
     # 1. AUTHENTICATION (Zero-Inference from .env)
     rpc_url = os.getenv("STARKNET_MAINNET_URL")
@@ -32,6 +34,23 @@ async def main():
     
     client = FullNodeClient(node_url=rpc_url)
     key_pair = KeyPair.from_private_key(private_key)
+
+    # Calculate the correct salt for this address
+    class_hash = 0x0539f522860b093c83664d4c5709968853f3e828d57d740f941f1738722a4501
+    computed_address = compute_address(
+        class_hash=class_hash,
+        constructor_calldata=[key_pair.public_key],
+        salt=0,
+        deployer_address=0
+    )
+    
+    print(f"Target address: {hex(target_address)}")
+    print(f"Computed address: {hex(computed_address)}")
+    
+    if computed_address != target_address:
+        print("❌ Address mismatch. This account was created with a different class_hash or salt.")
+        print("⚠️ Cannot deploy. The account may already exist with different parameters.")
+        return
 
     # 2. RESOURCE BOUNDS (The "Confused Currency" Fix)
     # We set these to use ETH for fees during deployment
