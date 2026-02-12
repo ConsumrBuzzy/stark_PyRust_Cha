@@ -20,6 +20,25 @@ except ImportError:
 
 console = Console()
 
+# Robust Env Loader
+def load_env_manual():
+    env_path = ".env"
+    if not os.path.exists(env_path): return
+    try:
+        lines = []
+        try:
+            with open(env_path, "r", encoding="utf-8") as f: lines = f.readlines()
+        except UnicodeDecodeError:
+            with open(env_path, "r", encoding="latin-1") as f: lines = f.readlines()
+        for line in lines:
+            if line.strip() and not line.strip().startswith("#") and "=" in line:
+                key, val = line.strip().split("=", 1)
+                if " #" in val: val = val.split(" #", 1)[0]
+                if key.strip() not in os.environ: os.environ[key.strip()] = val.strip()
+    except: pass
+
+load_env_manual()
+
 # Orbiter Makers (Check https://github.com/Orbiter-Finance/Orbiter-Bridge-Contracts)
 # Base (Chain 8453) -> Starknet (9004)
 # Maker Address usually stable, but verify if fails.
