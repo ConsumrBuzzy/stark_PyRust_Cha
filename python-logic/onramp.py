@@ -103,8 +103,23 @@ class CoinbaseOnramp:
             if not exchange: return 0.0
             
             # Load markets first to ensure connectivity
-            # await exchange.load_markets() 
+            await exchange.load_markets() 
             
+            # Debug Networks
+            if self.dry_run:
+                try:
+                    import json
+                    console.print("\n[dim]DEBUG: Supported Networks for ETH:[/dim]")
+                    if 'ETH' in exchange.currencies:
+                        nets = exchange.currencies['ETH'].get('networks', {})
+                        console.print(json.dumps(nets, indent=2))
+                    
+                    console.print("\n[dim]DEBUG: Supported Networks for USDC:[/dim]")
+                    if 'USDC' in exchange.currencies:
+                        nets = exchange.currencies['USDC'].get('networks', {})
+                        console.print(json.dumps(nets, indent=2))
+                except: pass
+
             balance = await exchange.fetch_balance()
             asset_bal = balance.get(asset, {})
             free = float(asset_bal.get('free', 0.0))
