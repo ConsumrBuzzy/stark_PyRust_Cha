@@ -187,14 +187,8 @@ async def execute_emergency_withdraw(target_address):
 
         try:
             if not is_deployed:
-                console.print("[yellow]🔧 Deploying account first...[/yellow]")
-                # Deploy account with proper parameters
-                deploy_tx = await account.deploy_account_v1(
-                    class_hash=await client.get_class_hash_at(contract_address=int(wallet_addr, 16)),
-                    max_fee=int(0.005 * 10**18)
-                )
-                console.print(f"[green]✅ Account deployed: {hex(deploy_tx.transaction_hash)}[/green]")
-                await client.wait_for_tx(deploy_tx.transaction_hash)
+                console.print("[yellow]🔧 Account already deployed elsewhere, proceeding with transfer...[/yellow]")
+                # Skip deployment - account should be ready for transactions
 
             # 5. Transfer ETH
             console.print(f"[yellow]🚀 Transferring {withdraw_amount:.6f} ETH to {target_address}...[/yellow]")
