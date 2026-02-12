@@ -20,23 +20,27 @@ def verify_status():
         
         console.print(f"   🔎 Fetching Metadata for Crew #{crew_id}...")
         
-        is_busy, busy_until, food_kg, location = inf_client.get_crew_metadata(crew_id)
+        # Unpack 5 values (ADR-043)
+        is_busy, busy_until, food_kg, location, class_id = inf_client.get_crew_metadata(crew_id)
         
         # Logic Interpretation
         status_text = "BUSY" if is_busy else "ACTIVE"
         status_color = "red" if is_busy else "green"
         
         food_text = f"{food_kg} kg"
-        food_color = "green" if food_kg > 500 else "red"
+        food_color = "green" if food_kg > 550 else "red"
+        
+        class_name = "Engineer" if class_id == 1 else f"Unknown ({class_id})"
         
         console.print(f"   🛠️ Status:   [{status_color}]{status_text}[/{status_color}]")
         if is_busy:
             console.print(f"      ⏳ Until: {busy_until}")
             
+        console.print(f"   👷 Class:    [bold cyan]{class_name}[/bold cyan]")
         console.print(f"   🍎 Food:     [{food_color}]{food_text}[/{food_color}]")
         console.print(f"   📍 Location: Lot {location}")
         
-        if food_kg < 500:
+        if food_kg < 550:
              console.print("[red]⚠️  STARVATION WARNING: Rations needed![/red]")
         else:
              console.print("[green]✅ Rations Sufficient (> 500kg)[/green]")

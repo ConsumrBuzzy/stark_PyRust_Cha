@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 import time
 import json
 from rich.console import Console
@@ -56,10 +57,25 @@ class CoinbaseOnramp:
         }
         return balances
 
+    def validate_address(self, address):
+        if not address: return False
+        # Starknet addresses are usually 63-66 chars hex
+        pattern = r"^0x[a-fA-F0-9]{60,66}$"
+        return bool(re.match(pattern, address))
+
     def bridge_funds(self):
-        """ Executes the sweep to Starknet if criteria met. """
-        console.print(Panel.fit("[bold blue]🌉 Starknet Onramp Bridge[/bold blue]"))
+        console.print(Panel.fit("[bold blue]🌉 Coinbase -> Starknet Bridge[/bold blue]"))
         
+        # 0. Validate Destination
+        wallet = os.getenv("STARKNET_WALLET_ADDRESS")
+        if not self.validate_address(wallet):
+             console.print(f"[bold red]❌ Invalid Wallet Format:[/bold red] {wallet}")
+             console.print("Starknet addresses must be hex strings (0x...) of correct length.")
+             return
+
+        console.print(f"Target Wallet: [cyan]{wallet}[/cyan]")
+
+        # 1. Check Source Balance
         balances = self.check_balance()
         usdc_bal = balances.get("USDC", 0.0)
         
