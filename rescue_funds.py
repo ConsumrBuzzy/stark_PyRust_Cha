@@ -76,20 +76,30 @@ class RPCManager:
 
     async def call_with_rotation(self, func, *args, **kwargs):
         """Executes a function with RPC rotation on failure."""
+        failed_this_cycle = []
         for _ in range(len(self.urls) or 1):
             url = self.get_next_url()
-            if not url: break
+            if not url or url in failed_this_cycle: 
+                continue
             
             client = FullNodeClient(node_url=url)
             try:
-                # Basic Health Check: Get Chain ID
+                # Use get_block_number as a simpler health check that often works on older RPCs
+                # though starknet-py 0.29 prefers 0.10.0+
                 console.print(f"[dim]Testing RPC: {url[:40]}...[/dim]")
-                await client.get_chain_id()
+                await client.get_block_number()
                 return await func(client, *args, **kwargs)
             except Exception as e:
-                console.print(f"[yellow]⚠️ RPC Fail ({url[:30]}...): {e}. Rotating...[/yellow]")
+                err_msg = str(e).lower()
+                if "429" in err_msg or "too many requests" in err_msg:
+                    console.print(f"[yellow]⚠️ RPC Rate Limit ({url[:30]}...). Rotating...[/yellow]")
+                elif "version" in err_msg or "invalid params" in err_msg:
+                    console.print(f"[yellow]⚠️ RPC Incompatible ({url[:30]}...). Skipping...[/yellow]")
+                else:
+                    console.print(f"[yellow]⚠️ RPC Fail ({url[:30]}...): {e}. Rotating...[/yellow]")
+                failed_this_cycle.append(url)
         
-        console.print("[bold red]❌ All RPC providers failed.[/bold red]")
+        console.print("[bold red]❌ All RPC providers failed or incompatible.[/bold red]")
         return None
 
 rpc_manager = RPCManager()
