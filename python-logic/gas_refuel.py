@@ -98,10 +98,6 @@ async def execute_swap(quote):
     if res.status_code != 200:
         console.print(f"[red]❌ Build Error: {res.status_code} - {build_data}[/red]")
         return
-
-    if 'calls' not in build_data:
-        console.print(f"[red]❌ Invalid Build Response: {build_data}[/red]")
-        return
     
     # 2. Setup Starknet Client & Account
     client = FullNodeClient(node_url=rpc_url)
