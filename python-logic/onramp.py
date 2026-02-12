@@ -56,6 +56,8 @@ class CoinbaseOnramp:
     
     ALLOWED_NETWORK = "starknet" # Target Network
     
+    MAX_WAIT_SECONDS = 300 # 5 minutes for funds to arrive
+
     def __init__(self, dry_run=True):
         self.dry_run = dry_run
         
@@ -63,23 +65,17 @@ class CoinbaseOnramp:
         self._api_key_name = os.getenv("COINBASE_CLIENT_API_KEY", "")
         self._api_private_key = os.getenv("COINBASE_API_PRIVATE_KEY", "")
         
-        # Handle escaped newlines
         if self._api_private_key:
             self._api_private_key = self._api_private_key.replace("\\n", "\n")
             
-        # Configuration
-        self._starknet_address = os.getenv("STARKNET_WALLET_ADDRESS", "")
-        self._min_bridge_amount = 5.0 # Min $5
-        self._dust_floor = 1.0 # Keep $1
+        # Configuration for ADR-047 (Base Transit)
+        self._transit_address = os.getenv("TRANSIT_EVM_ADDRESS", "")
         
         self._exchange = None
         self._initialized = False
 
     async def _ensure_exchange(self):
         if self._exchange is None:
-            console.print(f"DEBUG: Key Name: {self._api_key_name[:10]}...")
-            console.print(f"DEBUG: Private Key: {self._api_private_key[:10]}... (Len: {len(self._api_private_key)})")
-            
             if not self._api_key_name or not self._api_private_key:
                 console.print("[red]❌ Coinbase CDP credentials not configured.[/red]")
                 return None
@@ -87,7 +83,7 @@ class CoinbaseOnramp:
             self._exchange = ccxt.coinbase({
                 'apiKey': self._api_key_name,
                 'secret': self._api_private_key,
-                'verbose': False, # Disable Verbose Logging
+                'verbose': False, 
                 'enableRateLimit': True,
                 'options': {
                     'defaultType': 'spot',
@@ -102,86 +98,60 @@ class CoinbaseOnramp:
             exchange = await self._ensure_exchange()
             if not exchange: return 0.0
             
-            # Load markets first to ensure connectivity
-            await exchange.load_markets() 
-            
-            # Debug Networks
-            if self.dry_run:
-                try:
-                    import json
-                    console.print("\n[dim]DEBUG: Supported Networks for ETH:[/dim]")
-                    if 'ETH' in exchange.currencies:
-                        nets = exchange.currencies['ETH'].get('networks', {})
-                        console.print(json.dumps(nets, indent=2))
-                    
-                    console.print("\n[dim]DEBUG: Supported Networks for USDC:[/dim]")
-                    if 'USDC' in exchange.currencies:
-                        nets = exchange.currencies['USDC'].get('networks', {})
-                        console.print(json.dumps(nets, indent=2))
-                except: pass
-
             balance = await exchange.fetch_balance()
             asset_bal = balance.get(asset, {})
-            free = float(asset_bal.get('free', 0.0))
-            total = float(asset_bal.get('total', 0.0))
-            
-            console.print(f"💰 Coinbase Balance: {free:.4f} {asset} (Total: {total:.4f})")
-            return free
+            return float(asset_bal.get('free', 0.0))
         except Exception as e:
             console.print(f"[red]❌ Balance fetch error: {e}[/red]")
-            import traceback
-            traceback.print_exc()
             return 0.0
 
     async def bridge_funds(self):
-        console.print(Panel.fit("[bold blue]🌉 Coinbase -> Starknet Bridge[/bold blue]"))
-        try:
-            # 0. Validate Target
-            if not self._starknet_address:
-                console.print("[red]❌ Target Wallet not configured (STARKNET_WALLET_ADDRESS).[/red]")
-                return
+        console.print(Panel.fit("[bold blue]🌉 Coinbase -> Base (Transit)[/bold blue]"))
+        
+        # 0. Validate Target (EVM Transit Wallet)
+        if not self._transit_address:
+            console.print("[red]❌ TRANSIT_EVM_ADDRESS not configured. Run 'generate_transit_wallet.py' first.[/red]")
+            return
 
-            # 1. Check ETH Balance (Primary Gas Token)
-            eth_bal = await self.get_balance("ETH")
-            
-            # ... (Rest of logic) ...
-            target_amount = 0.005 # ~ $13
-            
-            if eth_bal < target_amount:
-                console.print(f"[yellow]⚠️  Low ETH Balance ({eth_bal:.4f} < {target_amount}). Checking USDC...[/yellow]")
+        # 1. Check ETH Balance
+        eth_bal = await self.get_balance("ETH")
+        # Base needs minor gas, but mostly we are moving to Orbiter
+        target_amount = 0.005 
+        
+        if eth_bal < target_amount:
+            console.print(f"[yellow]⚠️  Low ETH Balance ({eth_bal:.4f}).[/yellow]")
+            console.print("[red]⛔ Insufficient ETH on Coinbase.[/red]")
+            return
+
+        amount = eth_bal - 0.0005 # Leave dust
+        
+        console.print(f"   🎯 Transit: {self._transit_address} (Base L2)")
+        console.print(f"   💸 Withdrawing: {amount:.4f} ETH -> Base")
+
+        if self.dry_run:
+            console.print(Panel(f"Simulating Withdrawal:\nAsset: ETH\nAmount: {amount:.4f}\nNetwork: base\nTarget: {self._transit_address}", title="[DRY RUN]"))
+        else:
+            try:
+                exchange = await self._ensure_exchange()
+                # 'base' is the ID for Base Mainnet on Coinbase
+                params = {'network': 'base'} 
                 
-                # Check USDC
-                usdc_bal = await self.get_balance("USDC")
-                if usdc_bal > 15.0:
-                     console.print(f"[green]💰 Found ${usdc_bal:.2f} USDC. (Swap logic not implemented yet)[/green]")
-                     # Note: Requires swap. For now just report.
+                console.print(f"[yellow]🚀 Sending {amount:.4f} ETH to Base...[/yellow]")
                 
-                console.print("[red]⛔ Insufficient ETH on Coinbase. Buy ETH first.[/red]")
-                return
-
-            amount = eth_bal - 0.001 
-            # ... execution ...
-            if amount < 0.001: 
-                 console.print("[red]⛔ Available amount too small.[/red]")
-                 return
-
-            console.print(f"   🎯 Target: {self._starknet_address}")
-            console.print(f"   💸 Bridging: {amount:.4f} ETH -> Starknet")
-
-            if self.dry_run:
-                console.print(Panel(f"Simulating Withdrawal:\nAsset: ETH\nAmount: {amount:.4f}\nNetwork: {self.ALLOWED_NETWORK}", title="[DRY RUN]"))
-            else:
-                # ... (Execution logic) ...
-                try:
-                    exchange = await self._ensure_exchange()
-                    params = {'network': self.ALLOWED_NETWORK}
-                    console.print(f"[yellow]🚀 Sending {amount:.4f} ETH to Starknet...[/yellow]")
-                    withdrawal = await exchange.withdraw('ETH', amount, self._starknet_address, params=params)
-                    console.print(f"[green]✅ Withdrawal Initialized! ID: {withdrawal.get('id')}[/green]")
-                except Exception as e:
-                     console.print(f"[bold red]❌ Withdrawal Failed: {e}[/bold red]")
-        finally:
-            await self.close()
+                withdrawal = await exchange.withdraw(
+                    code='ETH',
+                    amount=amount,
+                    address=self._transit_address,
+                    params=params
+                )
+                
+                console.print(f"[green]✅ Withdrawal to Base Initialized! ID: {withdrawal.get('id')}[/green]")
+                console.print("[dim]Next Step: Run 'python python-logic/bridge_logic.py' once funds arrive.[/dim]")
+                
+            except Exception as e:
+                 console.print(f"[bold red]❌ Withdrawal Failed: {e}[/bold red]")
+        
+        await self.close()
 
     async def close(self):
         if self._exchange:
