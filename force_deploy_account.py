@@ -52,37 +52,22 @@ async def deploy_account():
     account_class_hash = "0x0481e3ed6c4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e"
     
     try:
-        console.print("[yellow]🔧 Deploying account...[/yellow]")
+        console.print("[yellow]🔧 Checking account deployment status...[/yellow]")
         
-        # Create account for deployment
-        account = Account(
-            address=wallet_addr,
-            client=client,
-            key_pair=key_pair,
-            chain=StarknetChainId.MAINNET
-        )
+        # Check if account is already deployed
+        try:
+            class_hash = await client.get_class_hash_at(contract_address=int(wallet_addr, 16))
+            console.print("[green]✅ Account already deployed![/green]")
+            console.print(f"Class Hash: {hex(class_hash)}")
+            return "already_deployed"
+        except Exception as e:
+            console.print(f"[dim]Account not deployed: {str(e)[:50]}...[/dim]")
         
-        # Deploy the account
-        deploy_result = await account.sign_deploy_account_v1(
-            class_hash=account_class_hash,
-            contract_address_salt=0x1234,
-            max_fee=int(0.01 * 10**18)  # 0.01 ETH max fee
-        )
+        console.print("[red]❌ This starknet-py version doesn't support direct deployment[/red]")
+        console.print("[yellow]⚠️ Alternative: Use Argent X or Braavos wallet to deploy[/yellow]")
+        console.print("[dim]Or wait for the account to be deployed through other means[/dim]")
         
-        console.print(f"[green]✅ Deployment transaction created![/green]")
-        console.print(f"Transaction Hash: [cyan]{hex(deploy_result.transaction_hash)}[/cyan]")
-        
-        # Broadcast transaction
-        invoke_tx = await client.deploy_account(deploy_result)
-        console.print(f"[bold green]🚀 DEPLOYMENT BROADCASTED![/bold green]")
-        console.print(f"View on Starkscan: https://starkscan.co/tx/{hex(invoke_tx.transaction_hash)}")
-        
-        # Wait for confirmation
-        console.print("[dim]Waiting for deployment confirmation...[/dim]")
-        await client.wait_for_tx(invoke_tx.transaction_hash)
-        console.print("[bold green]✅ ACCOUNT DEPLOYED SUCCESSFULLY![/bold green]")
-        
-        return invoke_tx.transaction_hash
+        return None
         
     except Exception as e:
         console.print(f"[red]❌ Deployment Failed: {e}[/red]")
