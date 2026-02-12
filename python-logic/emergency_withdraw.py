@@ -195,18 +195,14 @@ async def execute_emergency_withdraw(target_address):
     return await rpc_manager.call_with_rotation(_execute)
 
 if __name__ == "__main__":
-    # Auto-detect target if not provided
-    target = None
-    if "--target" in sys.argv:
-        target_idx = sys.argv.index("--target") + 1
-        if target_idx < len(sys.argv):
-            target = sys.argv[target_idx]
+    # Use default Coinbase Starknet address - no target argument needed
+    target_address = "0xYOUR_COINBASE_STARKNET_ADDRESS_HERE"  # Update this once
     
-    # Fallback to Coinbase address if no target provided
-    if not target:
-        console.print("[yellow]⚠️ No target provided. Using default Coinbase extraction.[/yellow]")
-        # You can set a default Coinbase address here or require user input
-        console.print("[red]❌ Please provide --target with your Coinbase Starknet address[/red]")
-        sys.exit(1)
+    console.print(Panel.fit(
+        f"[bold cyan]🎯 Target Configuration[/bold cyan]\n"
+        f"Withdrawing to: {target_address}\n"
+        f"[dim]Edit target_address in script to change destination[/dim]",
+        title="Extraction Target"
+    ))
     
-    asyncio.run(execute_emergency_withdraw(target))
+    asyncio.run(execute_emergency_withdraw(target_address))
