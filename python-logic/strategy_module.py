@@ -1,39 +1,97 @@
-from abc import ABC, abstractmethod
-from typing import Dict, Any
+import time
+import json
+import logging
+from rich.console import Console
+from rich.panel import Panel
 
-class BaseStrategy(ABC):
-    """
-    Abstract Base Class for stark_PyRust_Chain strategies.
-    
-    Strategies define the 'Business Logic' of the supply chain.
-    The Rust core handles the execution and data fetching.
-    """
-    
-    def __init__(self, name: str):
-        self.name = name
+try:
+    import stark_pyrust_chain
+except ImportError:
+    stark_pyrust_chain = None
 
-    @abstractmethod
-    def evaluate(self, state: Dict[str, Any]) -> str:
+# Configure Logging
+logging.basicConfig(
+    filename='strategy.log', 
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+console = Console()
+
+class BaseStrategy:
+    def __init__(self, dry_run=True):
+        self.dry_run = dry_run
+        
+    def log(self, message):
+        logging.info(message)
+        console.print(f"[dim]{message}[/dim]")
+
+class RefiningStrategy(BaseStrategy):
+    """
+    Automates the Iron -> Steel refining loop.
+    """
+    def __init__(self, dry_run=True):
+        super().__init__(dry_run)
+        self.client = stark_pyrust_chain.PyInfluenceClient()
+        self.graph = stark_pyrust_chain.PySupplyChain()
+        self.starknet = stark_pyrust_chain.PyStarknetClient(None)
+        
+        # Load or generate Session Key (In real app, load from Vault)
+        # For v0.1.0 demo, we generate a fresh one or assume it's loaded
+        try:
+            self.session_key = stark_pyrust_chain.PySessionKey()
+            self.log("Session Key loaded.")
+        except Exception as e:
+            self.log(f"Warning: Session Key missing ({e}). Only read-ops available.")
+            self.session_key = None
+
+    def tick(self):
         """
-        Evaluate the current state and return an action.
-        
-        State is a dictionary of game data (Resources, Market Prices, etc.) provided by Rust.
-        Returns a string command or JSON payload for the Rust engine to execute.
+        Execute one cycle of the strategy.
         """
-        pass
+        self.log("🔎 Scanning Adalia Markets...")
+        
+        # 1. Fetch Market Prices (Mocked for now as we don't have full Market API yet)
+        # In real implementation: market_prices = self.client.get_market_prices(["Iron Ore", "Steel", "Fuel"])
+        market_prices = {
+            "Iron Ore": 5.0,
+            "Fuel": 2.0,
+            "Steel": 20.0 # 20 * 100 = 2000 Rev. Cost = 5*250 (1250) + 2*20 (40) = 1290. Profit ~710.
+        }
+        
+        # 2. Calculate Profitability
+        try:
+            profit = self.graph.calculate_profitability("Refine Steel", market_prices)
+            self.log(f"Computed Profitability: {profit:.2f} SWAY")
+            
+            # 3. Decision Logic
+            if profit > 100.0: # Threshold
+                self.execute_refine(profit)
+            else:
+                self.log("Profit too low. Waiting...")
+                
+        except Exception as e:
+            self.log(f"Error calculating profit: {e}")
 
-class SimpleRefineryStrategy(BaseStrategy):
-    """
-    A basic strategy that refines resources if profitable.
-    """
-    
-    def evaluate(self, state: Dict[str, Any]) -> str:
-        # Example logic
-        iron_price = state.get("prices", {}).get("Iron", 0)
-        steel_price = state.get("prices", {}).get("Steel", 0)
+    def execute_refine(self, profit):
+        self.log(f"[bold green]🚀 Opportunity Detected! Profit: {profit:.2f}[/bold green]")
         
-        # Simple margin check
-        if steel_price > (iron_price * 1.5):
-            return "ACTION: REFINE_STEEL"
+        payload = {
+            "contract": "0xInfluenceRefinery",
+            "action": "REFINE",
+            "recipe": "Iron -> Steel",
+            "quantity": 1,
+            "timestamp": time.time()
+        }
         
-        return "ACTION: HOLD"
+        if self.dry_run:
+            console.print(Panel(json.dumps(payload, indent=2), title="[DRY RUN] Transaction Payload"))
+            self.log("Dry Run complete. No transaction sent.")
+        else:
+            if self.session_key:
+                # Sign and Submit
+                # sig = self.session_key.sign(payload)
+                # tx = self.starknet.send_tx(payload, sig)
+                self.log("Transaction submitted (Mock).")
+            else:
+                self.log("[red]Cannot Execute: No Session Key[/red]")

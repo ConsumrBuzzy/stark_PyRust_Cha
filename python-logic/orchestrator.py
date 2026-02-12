@@ -6,12 +6,20 @@ from pathlib import Path
 import os
 import sys
 import json
+import time
 
 try:
     import stark_pyrust_chain
     RUST_AVAILABLE = True
 except ImportError:
     RUST_AVAILABLE = False
+
+# Import Strategies
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+try:
+    from strategy_module import RefiningStrategy
+except ImportError:
+    RefiningStrategy = None
 
 app = typer.Typer()
 console = Console()
@@ -39,7 +47,7 @@ def init():
     try:
         vault = stark_pyrust_chain.PyVault(password)
         console.print("[green]Vault initialized successfully.[/green]")
-        console.print("Configuration saved (mock).") # In real app, save salt/hash
+        console.print("Configuration saved (mock).") 
         
     except Exception as e:
         console.print(f"[red]Initialization failed: {e}[/red]")
@@ -57,7 +65,6 @@ def wizard():
     
     if rpc_url:
         console.print(f"[dim]Saved RPC URL: {rpc_url[:20]}...[/dim]")
-        # In real app: update .env file here
 
     console.print("\n[bold]2. Influence API[/bold]")
     console.print("To interact with SAGE Labs, you need access to the Influence API.")
@@ -68,42 +75,42 @@ def wizard():
         generate_session_key()
 
 @app.command()
-def start(strategy: str = "default"):
+def start(strategy: str = "refine", dry_run: bool = True):
     """
     Start the autonomous supply chain orchestrator.
+    Defaults to 'refine' strategy in DRY RUN mode.
     """
-    console.print(f"[bold blue]Starting Orchestrator with strategy: {strategy}[/bold blue]")
+    console.print(f"[bold blue]Starting Orchestrator with strategy: {strategy} (Dry Run: {dry_run})[/bold blue]")
     
     if not RUST_AVAILABLE:
         console.print("[bold red]Rust extension missing.[/bold red]")
         return
 
-    # Initialize Clients
-    try:
-        # Client will auto-detect RPC from env if not passed args (or we could pass rpc_url from config)
-        starknet = stark_pyrust_chain.PyStarknetClient(None) 
-        console.print("✅ Starknet Client connected.")
-        
-        influence = stark_pyrust_chain.PyInfluenceClient()
-        console.print("✅ Influence Client connected.")
-        
-        graph = stark_pyrust_chain.PySupplyChain()
-        console.print("✅ Supply Chain Graph initialized.")
-        
-    except Exception as e:
-        console.print(f"[red]Startup failed: {e}[/red]")
+    active_strategy = None
+    
+    if strategy == "refine":
+        if RefiningStrategy:
+            active_strategy = RefiningStrategy(dry_run=dry_run)
+            console.print("✅ RefiningStrategy Initialized.")
+        else:
+            console.print("[red]RefiningStrategy module not found.[/red]")
+            return
+    else:
+        console.print(f"[red]Unknown strategy: {strategy}[/red]")
         return
     
-    console.print("[dim]Polling Influence state and Starknet blocks... (Ctrl+C to stop)[/dim]")
+    console.print("[dim]Starting Loop... (Ctrl+C to stop)[/dim]")
     
     try:
         while True:
-            # Main loop logic would go here
-            block = starknet.get_block_number()
-            # console.print(f"Current Block: {block}") # Uncomment to see noise
-            pass
+            console.print(f"\n[bold]--- Tick {time.strftime('%H:%M:%S')} ---[/bold]")
+            active_strategy.tick()
+            
+            console.print("[dim]Sleeping for 60s...[/dim]")
+            time.sleep(60)
+            
     except KeyboardInterrupt:
-        console.print("[yellow]Shutting down...[/yellow]")
+        console.print("\n[yellow]Shutting down...[/yellow]")
 
 def generate_session_key():
     if not RUST_AVAILABLE:
