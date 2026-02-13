@@ -57,44 +57,10 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           STARKNET_RPC_URL: ${{ secrets.STARKNET_RPC_URL }}
+          READY_BALANCE: ${{ steps.sentry_check.outputs.balance }}
         run: |
           echo "📱 STEP B: MESSENGER - Sending Fuel Detected alert"
-          python -c "
-import asyncio
-import sys
-import os
-from pathlib import Path
-
-# Load .env for local testing (GitHub Actions uses secrets)
-env_path = Path('.env')
-if env_path.exists():
-    with open(env_path, 'r', encoding='utf-8') as f:
-        for line in f:
-            if '=' in line and not line.startswith('#'):
-                key, value = line.strip().split('=', 1)
-                os.environ[key] = value
-
-sys.path.insert(0, 'src')
-from src.foundation.reporting import ReportingSystem
-
-async def fuel_alert():
-    reporting = ReportingSystem()
-    if reporting.is_enabled():
-        await reporting.telegram.send_alert(
-            '⛽ FUEL_INJECTED',
-            f'''0.0181 ETH Found on StarkNet!
-            
-📍 Address: 0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9
-💰 Balance: {os.getenv('READY_BALANCE', '0.018')} ETH
-⏰ Time: {asyncio.get_event_loop().time()}
-🎯 Action: AUTO-EXECUTE GENESIS BUNDLE
-
-The DuggerCore-Stark Engine is now initiating autonomous deployment...'''
-        )
-        print('✅ Fuel alert sent to Telegram')
-
-asyncio.run(fuel_alert())
-"
+          python scripts/step_b_fuel_alert.py
           
       - name: Step C: Forge - Execute Genesis Bundle
         if: steps.sentry_check.outputs.ready_for_mining == 'true' && github.event.inputs.mode != 'dry-run'
@@ -128,43 +94,7 @@ asyncio.run(fuel_alert())
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           echo "📊 STEP E: YIELD - Reporting first Steel production"
-          python -c "
-import asyncio
-import sys
-import os
-from pathlib import Path
-
-# Load .env for local testing
-env_path = Path('.env')
-if env_path.exists():
-    with open(env_path, 'r', encoding='utf-8') as f:
-        for line in f:
-            if '=' in line and not line.startswith('#'):
-                key, value = line.strip().split('=', 1)
-                os.environ[key] = value
-
-sys.path.insert(0, 'src')
-from src.foundation.reporting import ReportingSystem
-
-async def yield_report():
-    reporting = ReportingSystem()
-    if reporting.is_enabled():
-        await reporting.telegram.send_alert(
-            '⛏️ STEEL_MILL_ACTIVE',
-            f'''Cycle 1 Complete!
-            
-🏭 Production: 100 Steel
-💰 ROI: +100 Steel
-⛽ Gas Used: ~20 Gwei
-⏰ Time: {asyncio.get_event_loop().time()}
-🎯 Status: CONTINUING AUTONOMOUS OPERATION
-
-The DuggerCore-Stark Engine is now running the Iron → Steel loop autonomously...'''
-        )
-        print('✅ Yield report sent to Telegram')
-
-asyncio.run(yield_report())
-"
+          python scripts/step_e_yield_report.py
           
       - name: Environment Parity Check
         if: github.event.inputs.mode == 'dry-run' || github.event.inputs.mode == 'telegram-test'
