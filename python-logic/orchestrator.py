@@ -85,12 +85,13 @@ def start(strategy: str = "refine", dry_run: bool = True):
     # Initialize Strategy
     active_strategy = None
     if strategy == "refine":
-        active_strategy = RefiningStrategy(dry_run=dry_run)
+        # Prefer core strategy; fallback to legacy
+        strategy_cls = CoreRefiningStrategy or RefiningStrategy
+        active_strategy = strategy_cls(dry_run=dry_run)
         
         # Monkey-patch strategy logging to feed Dashboard
         def dashboard_log(msg):
             dash.log(msg)
-            # Check if profit message to update ROI (Parsing hack for v1)
             if "Profit:" in msg:
                  try:
                      val = float(msg.split("Profit:")[1].strip().split()[0])
@@ -153,21 +154,15 @@ def pulse(strategy: str = "refine", dry_run: bool = True):
     # Initialize Strategy
     active_strategy = None
     if strategy == "refine":
-        active_strategy = RefiningStrategy(dry_run=dry_run)
+        strategy_cls = CoreRefiningStrategy or RefiningStrategy
+        active_strategy = strategy_cls(dry_run=dry_run)
         
         # Simple logging for Pulse (Stdout) with Masking
         def pulse_log(msg):
-            # 1. Mask known secrets if they somehow leak into logs
             secrets = [os.getenv("STARKNET_PRIVATE_KEY"), os.getenv("INFLUENCE_API_KEY")]
             for s in secrets:
                 if s and s in msg:
                     msg = msg.replace(s, "***SECRET***")
-            
-            # 2. General Heuristic: Mask long hex strings (signatures/keys) in logs
-            #    (User requested explicitly redacting 0x strings)
-            #    We use a simple check to avoid masking Wallet Addresses (usually public) unless paranoid.
-            #    Let's just mask Private Keys context if identifiable. 
-            
             print(f"[PULSE] {msg}")
 
         active_strategy.log = pulse_log
