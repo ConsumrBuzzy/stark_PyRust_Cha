@@ -64,6 +64,13 @@ def test_balance_with_rotation_uses_stub_client():
         rpc_urls=["http://fake-rpc"],
         eth_contract=1,
     )
+    # Monkeypatch balance_via_rpc to avoid network
+    def fake_balance_via_rpc(address, rpc_url, eth_contract):
+        assert rpc_url == "http://fake-rpc"
+        return Decimal("1")
+
+    ghost_monitor.balance_via_rpc = fake_balance_via_rpc  # type: ignore
+
     bal, rpc = asyncio.run(
         ghost_monitor.balance_with_rotation(
             settings.ghost_address, settings.rpc_urls, settings.eth_contract
