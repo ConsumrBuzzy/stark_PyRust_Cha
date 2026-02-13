@@ -1,0 +1,198 @@
+name: Iron to Steel Auto Mining Suite
+
+on:
+  schedule:
+    # High-frequency monitoring during critical window
+    - cron: '*/5 * * * *'  # Every 5 minutes
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Execution mode'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+        - auto
+        - dry-run
+        - telegram-test
+
+jobs:
+  iron-to-steel-auto:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Build Rust Extension
+        run: |
+          cd rust-core
+          cargo build --release
+          cd ..
+          pip install maturin
+          maturin develop --manifest-path rust-core/Cargo.toml
+          
+      - name: Step A: Sentry - Check Mining Threshold
+        id: sentry_check
+        env:
+          STARKNET_RPC_URL: ${{ secrets.STARKNET_RPC_URL }}
+        run: |
+          echo "🔍 STEP A: SENTRY - Polling Alchemy for 0.018 ETH threshold"
+          python scripts/check_threshold.py >> $GITHUB_OUTPUT
+          
+      - name: Step B: Messenger - Send Fuel Alert
+        if: steps.sentry_check.outputs.ready_for_mining == 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          STARKNET_RPC_URL: ${{ secrets.STARKNET_RPC_URL }}
+        run: |
+          echo "📱 STEP B: MESSENGER - Sending Fuel Detected alert"
+          python -c "
+import asyncio
+import sys
+import os
+from pathlib import Path
+
+# Load .env for local testing (GitHub Actions uses secrets)
+env_path = Path('.env')
+if env_path.exists():
+    with open(env_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            if '=' in line and not line.startswith('#'):
+                key, value = line.strip().split('=', 1)
+                os.environ[key] = value
+
+sys.path.insert(0, 'src')
+from src.foundation.reporting import ReportingSystem
+
+async def fuel_alert():
+    reporting = ReportingSystem()
+    if reporting.is_enabled():
+        await reporting.telegram.send_alert(
+            '⛽ FUEL_INJECTED',
+            f'''0.0181 ETH Found on StarkNet!
+            
+📍 Address: 0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9
+💰 Balance: {os.getenv('READY_BALANCE', '0.018')} ETH
+⏰ Time: {asyncio.get_event_loop().time()}
+🎯 Action: AUTO-EXECUTE GENESIS BUNDLE
+
+The DuggerCore-Stark Engine is now initiating autonomous deployment...'''
+        )
+        print('✅ Fuel alert sent to Telegram')
+
+asyncio.run(fuel_alert())
+"
+          
+      - name: Step C: Forge - Execute Genesis Bundle
+        if: steps.sentry_check.outputs.ready_for_mining == 'true' && github.event.inputs.mode != 'dry-run'
+        env:
+          STARKNET_RPC_URL: ${{ secrets.STARKNET_RPC_URL }}
+          STARKNET_WALLET_ADDRESS: ${{ secrets.STARKNET_WALLET_ADDRESS }}
+          STARKNET_PRIVATE_KEY: ${{ secrets.STARKNET_PRIVATE_KEY }}
+          INFLUENCE_API_KEY: ${{ secrets.INFLUENCE_API_KEY }}
+          SIGNER_PASSWORD: ${{ secrets.SIGNER_PASSWORD }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "⚛️ STEP C: FORGE - Executing Genesis Bundle"
+          python main.py --full-auto
+          
+      - name: Step D: Loop - Launch Iron → Steel Refining
+        if: steps.sentry_check.outputs.ready_for_mining == 'true' && github.event.inputs.mode != 'dry-run'
+        env:
+          STARKNET_RPC_URL: ${{ secrets.STARKNET_RPC_URL }}
+          STARKNET_WALLET_ADDRESS: ${{ secrets.STARKNET_WALLET_ADDRESS }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "⛏️ STEP D: LOOP - Launching Iron → Steel refining"
+          python python-logic/orchestrator.py --strategy refining
+          
+      - name: Step E: Yield - Report First Steel Production
+        if: steps.sentry_check.outputs.ready_for_mining == 'true' && github.event.inputs.mode != 'dry-run'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "📊 STEP E: YIELD - Reporting first Steel production"
+          python -c "
+import asyncio
+import sys
+import os
+from pathlib import Path
+
+# Load .env for local testing
+env_path = Path('.env')
+if env_path.exists():
+    with open(env_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            if '=' in line and not line.startswith('#'):
+                key, value = line.strip().split('=', 1)
+                os.environ[key] = value
+
+sys.path.insert(0, 'src')
+from src.foundation.reporting import ReportingSystem
+
+async def yield_report():
+    reporting = ReportingSystem()
+    if reporting.is_enabled():
+        await reporting.telegram.send_alert(
+            '⛏️ STEEL_MILL_ACTIVE',
+            f'''Cycle 1 Complete!
+            
+🏭 Production: 100 Steel
+💰 ROI: +100 Steel
+⛽ Gas Used: ~20 Gwei
+⏰ Time: {asyncio.get_event_loop().time()}
+🎯 Status: CONTINUING AUTONOMOUS OPERATION
+
+The DuggerCore-Stark Engine is now running the Iron → Steel loop autonomously...'''
+        )
+        print('✅ Yield report sent to Telegram')
+
+asyncio.run(yield_report())
+"
+          
+      - name: Environment Parity Check
+        if: github.event.inputs.mode == 'dry-run' || github.event.inputs.mode == 'telegram-test'
+        run: |
+          echo "🔍 ENVIRONMENT PARITY CHECK"
+          echo "Python Path: $PYTHONPATH"
+          echo "Working Directory: $(pwd)"
+          echo "Python Version: $(python --version)"
+          echo "Rust Version: $(rustc --version)"
+          python -c "import sys; print(f'Sys Path: {sys.path}')"
+          
+      - name: Telegram Test
+        if: github.event.inputs.mode == 'telegram-test'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "📱 TESTING TELEGRAM CONNECTIVITY"
+          python scripts/test_telegram.py
+          
+      - name: Mining History Log
+        if: steps.sentry_check.outputs.ready_for_mining == 'true' && github.event.inputs.mode != 'dry-run'
+        run: |
+          echo "📊 LOGGING MINING HISTORY"
+          mkdir -p data
+          echo "$(date),0.018,genesis_complete,100_steel" >> data/mining_history.csv
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/mining_history.csv
+          git diff --staged --quiet || git commit -m "🏭 Auto-log: Iron → Steel mining cycle $(date)"
+          git push

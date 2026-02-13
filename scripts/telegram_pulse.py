@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+"""
+Telegram Pulse Helper - GitHub Actions Communication Bridge
+"""
+
+import asyncio
+import sys
+import os
+from pathlib import Path
+
+# Load .env file
+env_path = Path('.env')
+if env_path.exists():
+    with open(env_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            if '=' in line and not line.startswith('#'):
+                key, value = line.strip().split('=', 1)
+                os.environ[key] = value
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from src.foundation.reporting import ReportingSystem
+
+async def send_pulse(pulse_type: str, message: str):
+    """Send a Telegram pulse from GitHub Actions"""
+    reporting = ReportingSystem()
+    
+    if reporting.is_enabled():
+        await reporting.telegram.send_alert(pulse_type, message)
+        print(f"✅ {pulse_type} pulse sent successfully")
+        return True
+    else:
+        print(f"❌ Telegram not configured for {pulse_type}")
+        return False
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print("Usage: python telegram_pulse.py <pulse_type> <message>")
+        sys.exit(1)
+    
+    pulse_type = sys.argv[1]
+    message = sys.argv[2]
+    
+    asyncio.run(send_pulse(pulse_type, message))
