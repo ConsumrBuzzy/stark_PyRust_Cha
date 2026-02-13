@@ -108,42 +108,36 @@ class AtomicActivationEngine:
     async def check_starknet_balance(self) -> Dict[str, Any]:
         """Check current StarkNet balance"""
         
-        # Try multiple providers to find a working one
-        provider_configs = self.provider_factory.providers
-        
-        for provider_name, config in provider_configs.items():
-            try:
-                # Get the actual client from the provider factory
-                _, client = self.provider_factory.get_provider_by_name(provider_name)
-                
-                # Check balance using call_contract
-                from starknet_py.hash.selector import get_selector_from_name
-                from starknet_py.net.client_models import Call
-                
-                call = Call(
-                    to_addr=self.eth_contract,
-                    selector=get_selector_from_name("balanceOf"),
-                    calldata=[int(self.wallet_address, 16)]
-                )
-                
-                result = await client.call_contract(call)
-                balance = result[0] / 1e18
-                
-                logger.info(f"✅ Balance check successful via {provider_name}: {balance:.6f} ETH")
-                
-                return {
-                    "balance": balance,
-                    "provider": provider_name,
-                    "timestamp": datetime.now().isoformat()
-                }
-                
-            except Exception as e:
-                logger.warning(f"⚠️ Balance check failed via {provider_name}: {e}")
-                continue
-        
-        # If all providers fail, return conservative estimate
-        logger.error("❌ All providers failed for balance check")
-        return {"balance": 0.009157, "error": "All providers failed", "provider": "none"}
+        try:
+            # Get best provider
+            provider_name, client = self.provider_factory.get_best_provider()
+            
+            # Check balance using call_contract
+            from starknet_py.hash.selector import get_selector_from_name
+            from starknet_py.net.client_models import Call
+            
+            call = Call(
+                to_addr=self.eth_contract,
+                selector=get_selector_from_name("balanceOf"),
+                calldata=[int(self.wallet_address, 16)]
+            )
+            
+            result = await client.call_contract(call)
+            balance = result[0] / 1e18
+            
+            logger.info(f"✅ Balance check successful via {provider_name}: {balance:.6f} ETH")
+            
+            return {
+                "balance": balance,
+                "provider": provider_name,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Balance check failed: {e}")
+            # Return current known balance as fallback
+            logger.info("💰 Using fallback balance: 0.009157 ETH")
+            return {"balance": 0.009157, "error": str(e), "provider": "fallback"}
     
     def prompt_master_password(self) -> bool:
         """Prompt for master signer password"""
