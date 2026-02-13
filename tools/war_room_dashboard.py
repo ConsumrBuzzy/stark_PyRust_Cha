@@ -37,17 +37,21 @@ class WarRoomDashboard:
         self.dashboard = get_dashboard()
         self.provider_factory = get_provider_factory()
         
-        # StarkNet configuration
-        self.main_wallet = "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9"
+        # StarkNet configuration from environment
+        self.main_wallet = os.getenv("STARKNET_WALLET_ADDRESS")
         self.ghost_address = "0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463"
         self.eth_contract = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        
+        # Validate configuration
+        if not self.main_wallet:
+            raise ValueError("STARKNET_WALLET_ADDRESS environment variable not set")
         
         # Monitoring state
         self.check_count = 0
         self.last_balances = {}
         self.alerts_sent = set()
         
-        logger.info("🎯 War Room Dashboard initialized")
+        logger.info(f"🎯 War Room Dashboard initialized for {self.main_wallet[:10]}...")
     
     async def check_starknet_balances(self) -> Dict[str, float]:
         """Check balances using Shadow Protocol"""
