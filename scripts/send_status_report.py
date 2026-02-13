@@ -19,31 +19,21 @@ if env_path.exists():
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.foundation.reporting import ReportingSystem
+from src.ops.reporting_ops import send_status_report as send_status_report_op
 
 async def send_status_report():
     """Send GitHub Actions status report to Telegram"""
-    reporting = ReportingSystem()
-    
-    if reporting.is_enabled():
-        # Get environment variables from GitHub Actions
-        status = os.getenv('JOB_STATUS', 'unknown')
-        workflow = os.getenv('GITHUB_WORKFLOW', 'unknown')
-        run_id = os.getenv('GITHUB_RUN_ID', 'unknown')
-        
-        message = f"""📊 GITHUB ACTIONS REPORT
 
-🔄 Workflow: {workflow}
-🆔 Run ID: {run_id}
-✅ Status: {status}
-⏰ Time: {asyncio.get_event_loop().time()}
+    status = os.getenv('JOB_STATUS', 'unknown')
+    workflow = os.getenv('GITHUB_WORKFLOW', 'unknown')
+    run_id = os.getenv('GITHUB_RUN_ID', 'unknown')
 
-🏭 Full-Auto Mining Rig Status Report"""
-        
-        await reporting.telegram.send_alert('GITHUB ACTIONS REPORT', message)
-        print("✅ Status report sent to Telegram")
-    else:
-        print("❌ Telegram not configured")
+    await send_status_report_op(
+        status=status,
+        workflow=workflow,
+        run_id=run_id,
+        event_time=asyncio.get_event_loop().time(),
+    )
 
 if __name__ == "__main__":
     asyncio.run(send_status_report())
