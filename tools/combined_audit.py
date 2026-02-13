@@ -18,9 +18,9 @@ from loguru import logger
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-from starknet_py.net.full_node_client import FullNodeClient
-from starknet_py.hash.selector import get_selector_from_name
-from starknet_py.net.client_models import Call
+
+from src.ops.audit_ops import run_audit, build_tables
+from src.ops.env import build_config
 
 class CombinedAuditor:
     """Aggregates balances across multiple StarkNet addresses"""
@@ -28,23 +28,13 @@ class CombinedAuditor:
     def __init__(self):
         self.console = Console()
         self.setup_logging()
-        self.load_env()
-        
-        # Target addresses from environment
-        self.main_wallet = os.getenv("STARKNET_WALLET_ADDRESS")
-        self.ghost_address = os.getenv("STARKNET_GHOST_ADDRESS", "0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463")
-        
-        # Activation thresholds
-        self.activation_threshold = 0.016  # ETH needed for activation
-        self.ghost_threshold = 0.005      # Minimum for sweep trigger
-        
-        # StarkNet configuration
-        self.starknet_rpc = os.getenv("STARKNET_MAINNET_URL")
-        self.client = FullNodeClient(node_url=self.starknet_rpc) if self.starknet_rpc else None
-        
-        # ETH contract
-        self.eth_contract = int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)
-        
+        cfg = build_config()
+
+        self.main_wallet = cfg.starknet_address
+        self.ghost_address = os.getenv("STARKNET_GHOST_ADDRESS") or cfg.phantom_address
+        self.activation_threshold = float(os.getenv("ACTIVATION_THRESHOLD", 0.016))
+        self.ghost_threshold = float(os.getenv("GHOST_THRESHOLD", 0.005))
+
         # Statistics
         self.check_count = 0
         self.last_combined_balance = 0.0
@@ -82,54 +72,12 @@ class CombinedAuditor:
                         key, value = line.strip().split("=", 1)
                         os.environ[key.strip()] = value.strip()
     
-    async def check_balance_shadow(self, address: str, label: str) -> Optional[float]:
-        """Check balance using Shadow Protocol (ERC-20 contract call)"""
-        
-        if not self.client:
-            logger.error("❌ StarkNet client not available")
-            return None
-        
-        try:
-            # Shadow call to ETH contract
-            call = Call(
-                to_addr=self.eth_contract,
-                selector=get_selector_from_name("balanceOf"),
-                calldata=[int(address, 16)]
-            )
-            
-            result = await self.client.call_contract(call)
-            balance_wei = result[0]
-            balance_eth = balance_wei / 1e18
-            
-            logger.debug(f"✅ {label}: {balance_eth:.6f} ETH")
-            return balance_eth
-            
-        except Exception as e:
-            logger.error(f"❌ {label} balance check failed: {e}")
-            return None
-    
     async def check_all_balances(self) -> Dict[str, float]:
-        """Check balances for all target addresses"""
-        
-        # Parallel balance checks
-        main_balance_task = self.check_balance_shadow(self.main_wallet, "Main Wallet")
-        ghost_balance_task = self.check_balance_shadow(self.ghost_address, "Ghost Address")
-        
-        main_balance, ghost_balance = await asyncio.gather(
-            main_balance_task,
-            ghost_balance_task,
-            return_exceptions=True
-        )
-        
-        # Handle exceptions
-        if isinstance(main_balance, Exception):
-            main_balance = None
-        if isinstance(ghost_balance, Exception):
-            ghost_balance = None
-        
+        """Check balances using ops.audit_ops (one-shot)."""
+        result = await run_audit(ghost_address=self.ghost_address, main_address=self.main_wallet)
         return {
-            "main_wallet": main_balance or 0.0,
-            "ghost_address": ghost_balance or 0.0
+            "main_wallet": float(result.main_balance_eth),
+            "ghost_address": float(result.ghost_balance_eth),
         }
     
     def create_balance_table(self, balances: Dict[str, float]) -> Table:
