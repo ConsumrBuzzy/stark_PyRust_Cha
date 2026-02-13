@@ -41,6 +41,8 @@ class AddressSearchEngine:
         self,
         hashes: Optional[Iterable[int]] = None,
         salt_range: int = 1000,
+        salt_values: Optional[Iterable[int]] = None,
+        constructor_patterns: Optional[List[List[int]]] = None,
     ) -> Dict[str, Any]:
         if not self.wallet_address or not self.private_key_hex:
             return {"success": False, "error": "Missing wallet or private key in environment"}
@@ -48,27 +50,31 @@ class AddressSearchEngine:
         target_int = int(self.wallet_address, 16)
         pub_key = KeyPair.from_private_key(int(self.private_key_hex, 16)).public_key
         hashes_list = list(hashes) if hashes is not None else _default_hashes()
+        salts_iter = list(salt_values) if salt_values is not None else list(range(0, salt_range))
+        patterns = constructor_patterns or [
+            [pub_key, 0],
+            [pub_key],
+            [pub_key, 1],
+            [pub_key, None],  # placeholder for salt substitution
+        ]
 
         console.print(f"🔍 Target: {hex(target_int)}")
         console.print(f"🔑 Public Key: {hex(pub_key)}")
-        console.print(f"🧪 Testing {len(hashes_list)} hashes × {salt_range} salts = {len(hashes_list) * salt_range} combos")
+        console.print(f"🧪 Testing {len(hashes_list)} hashes × {len(salts_iter)} salts = {len(hashes_list) * len(salts_iter)} combos")
 
         for idx, h in enumerate(hashes_list):
             console.print(f"\n🔍 Hash {idx + 1}/{len(hashes_list)}: {hex(h)}")
-            for salt in range(0, salt_range):
+            for salt in salts_iter:
                 if salt % 100 == 0:
-                    console.print(f"  📊 Progress: Salt {salt}/{salt_range}")
-                patterns = [
-                    [pub_key, 0],
-                    [pub_key],
-                    [pub_key, 1],
-                    [pub_key, salt],
-                ]
+                    console.print(f"  📊 Progress: Salt {salt}/{salts_iter[-1] if salts_iter else salt_range}")
+
                 for calldata in patterns:
+                    # Replace placeholder None with current salt if present
+                    effective_calldata = [salt if x is None else x for x in calldata]
                     try:
                         addr = compute_address(
                             class_hash=h,
-                            constructor_calldata=calldata,
+                            constructor_calldata=effective_calldata,
                             salt=salt,
                             deployer_address=0,
                         )
@@ -76,15 +82,15 @@ class AddressSearchEngine:
                             console.print("\n🎉 **MATCH FOUND!** 🎉")
                             console.print(f"Hash: {hex(h)}")
                             console.print(f"Salt: {salt}")
-                            console.print(f"Constructor: {calldata}")
+                            console.print(f"Constructor: {effective_calldata}")
                             return {
                                 "success": True,
                                 "hash": hex(h),
                                 "salt": salt,
-                                "calldata": calldata,
+                                "calldata": effective_calldata,
                                 "target": hex(target_int),
                             }
                     except Exception:
                         continue
-        console.print(f"\n❌ No match found in {len(hashes_list) * salt_range} combinations")
-        return {"success": False, "error": "No match", "tested": len(hashes_list) * salt_range}
+        console.print(f"\n❌ No match found in {len(hashes_list) * len(salts_iter)} combinations")
+        return {"success": False, "error": "No match", "tested": len(hashes_list) * len(salts_iter)}
