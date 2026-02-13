@@ -205,7 +205,7 @@ class AtomicActivationEngine:
             
             # Sign and send transaction
             signed_tx = self.base_web3.eth.account.sign_transaction(deposit_tx, phantom_private_key)
-            tx_hash = self.base_web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+            tx_hash = self.base_web3.eth.send_raw_transaction(signed_tx.raw_transaction)
             
             self.console.print(f"📡 Bridge transaction sent: {tx_hash.hex()}")
             
