@@ -8,6 +8,7 @@ Moves ETH from Base (L2) to Starknet via Orbiter Finance.
 import os
 import sys
 import json
+import asyncio
 from decimal import Decimal
 from rich.console import Console
 from rich.panel import Panel
@@ -19,9 +20,15 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 try:
     from foundation.legacy_env import load_env_manual
+    from foundation.security import SecurityManager
+    from foundation.constants import BASE_RPC_URL
+    from engines.bridge_system import OrbiterBridgeAdapter
 except Exception:
     def load_env_manual():  # type: ignore
         return
+    SecurityManager = None
+    OrbiterBridgeAdapter = None
+    BASE_RPC_URL = "https://mainnet.base.org"
 
 try:
     from web3 import Web3
@@ -41,7 +48,8 @@ STARKNET_CODE = 9004
 class OrbiterBridge:
     def __init__(self, dry_run=True):
         self.dry_run = dry_run
-        self.w3 = Web3(Web3.HTTPProvider("https://mainnet.base.org"))
+        self.w3 = Web3(Web3.HTTPProvider(BASE_RPC_URL))
+        self.security_manager = SecurityManager() if SecurityManager else None
         
         # Load Transit Key
         self.private_key = os.getenv("TRANSIT_EVM_PRIVATE_KEY")
@@ -57,76 +65,64 @@ class OrbiterBridge:
             console.print(f"[red]❌ Invalid EVM Key:[/red] {e}")
             self.account = None
 
+        # Adapter for Orbiter path
+        self.adapter = OrbiterBridgeAdapter(
+            base_web3=self.w3,
+            security_manager=self.security_manager,
+            maker_address=ORBITER_MAKER_BASE,
+            destination_code=STARKNET_CODE,
+            min_amount_eth=0.005,
+        ) if OrbiterBridgeAdapter else None
+
     def get_balance(self):
         if not self.account: return 0.0
-        wei = self.w3.eth.get_balance(self.account.address)
-        eth = self.w3.from_wei(wei, 'ether')
-        return float(eth)
+        return asyncio.run(self.adapter.get_balance(self.account.address)) if self.adapter else 0.0
 
     def bridge_to_starknet(self, amount_eth):
         """
         Sends ETH to Orbiter Maker with the 9004 code.
         """
-        if not self.account: return
+        if not self.account or not self.adapter:
+            return
 
         console.print(Panel.fit("[bold blue]🌉 Base -> Starknet (via Orbiter)[/bold blue]"))
         
-        balance = self.get_balance()
+        balance = asyncio.run(self.adapter.get_balance(self.account.address))
         console.print(f"   💰 Transit Balance (Base): {balance:.4f} ETH")
 
         if balance < amount_eth:
             console.print(f"[red]⛔ Insufficient Balance on Base. Need {amount_eth} ETH.[/red]")
             return
 
-        # Encoding Logic (Orbiter Specific)
-        # Keeps first 4 decimal places, replaces last 4 digits with Destination Code (9004)
-        # However, usually it's: Amount + Code. 
-        # Correct Formula: (Amount_Wei // 10000 * 10000) + 9004
-        
-        wei_amount = self.w3.to_wei(amount_eth, 'ether')
-        # Safety Check: Ensure amount > 0.005 (Orbiter Min)
-        if amount_eth < 0.005:
-            console.print("[red]⛔ Amount too low for Orbiter (Min ~0.005 ETH).[/red]")
+        if amount_eth < self.adapter.min_amount_eth:
+            console.print(f"[red]⛔ Amount too low for Orbiter (Min ~{self.adapter.min_amount_eth} ETH).[/red]")
             return
 
-        final_wei = (wei_amount // 10000 * 10000) + STARKNET_CODE
-        final_eth = self.w3.from_wei(final_wei, 'ether')
-        
-        console.print(f"   🎯 Destination: Starknet (Code: {STARKNET_CODE})")
-        console.print(f"   💸 Sending: {final_eth:.18f} ETH")
-        console.print(f"   📬 To Maker: {ORBITER_MAKER_BASE}")
+        result = asyncio.run(self.adapter.bridge_to_starknet(
+            amount_eth=amount_eth,
+            transit_address=self.account.address,
+            dry_run=self.dry_run,
+            override_key=self.private_key,
+        ))
 
-        if self.dry_run:
-            console.print(Panel(f"[DRY RUN] Transaction Payload:\n"
-                              f"To: {ORBITER_MAKER_BASE}\n"
-                              f"Value: {final_wei} wei\n"
-                              f"ChainId: 8453 (Base)\n"
-                              f"Nonce: (Pending)", title="Simulation"))
+        if result.get("dry_run"):
+            payload = result["payload"]
+            console.print(Panel(
+                f"[DRY RUN] Transaction Payload:\n"
+                f"To: {payload['to']}\n"
+                f"Value: {payload['value']} wei\n"
+                f"ChainId: {payload['chainId']} (Base)\n"
+                f"Nonce: {payload['nonce']}",
+                title="Simulation"
+            ))
             return
 
-        # Execute
-        try:
-            nonce = self.w3.eth.get_transaction_count(self.account.address)
-            gas_price = self.w3.eth.gas_price
-            
-            tx = {
-                'to': self.w3.to_checksum_address(ORBITER_MAKER_BASE),
-                'value': final_wei,
-                'gas': 100000, # Increased for contract-based Orbiter Maker (prev 23k)
-                'gasPrice': gas_price,
-                'nonce': nonce,
-                'chainId': 8453
-            }
-            
-            signed_tx = self.w3.eth.account.sign_transaction(tx, self.private_key)
+        if result.get("success"):
             console.print("[yellow]🚀 Broadcasting to Base Network...[/yellow]")
-            
-            tx_hash = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
-            console.print(f"[green]✅ Bridge Tx Sent! Hash: {self.w3.to_hex(tx_hash)}[/green]")
+            console.print(f"[green]✅ Bridge Tx Sent! Hash: {result['tx_hash']}[/green]")
             console.print("[dim]Wait ~2 mins for funds to arrive on Starknet.[/dim]")
-            
-        except Exception as e:
-            console.print(f"[bold red]❌ Bridge Failed: {e}[/bold red]")
+        else:
+            console.print(f"[bold red]❌ Bridge Failed: {result.get('error')}[/bold red]")
 
 if __name__ == "__main__":
     is_dry = "--no-dry-run" not in sys.argv
