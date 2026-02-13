@@ -31,8 +31,8 @@ class CombinedAuditor:
         self.load_env()
         
         # Target addresses
-        self.main_wallet = "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9"
-        self.ghost_address = "0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463"
+        self.main_wallet = "os.getenv("STARKNET_WALLET_ADDRESS")"
+        self.ghost_address = "os.getenv("STARKNET_GHOST_ADDRESS")"
         
         # Activation thresholds
         self.activation_threshold = 0.016  # ETH needed for activation
@@ -43,7 +43,7 @@ class CombinedAuditor:
         self.client = FullNodeClient(node_url=self.starknet_rpc) if self.starknet_rpc else None
         
         # ETH contract
-        self.eth_contract = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        self.eth_contract = int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)
         
         # Statistics
         self.check_count = 0

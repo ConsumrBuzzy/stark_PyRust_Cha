@@ -34,11 +34,11 @@ class GhostSentryV3Shadow:
         self.load_env()
         
         # Shadow Protocol Configuration
-        self.ghost_address = "0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463"
-        self.main_wallet = "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9"
+        self.ghost_address = "os.getenv("STARKNET_GHOST_ADDRESS")"
+        self.main_wallet = "os.getenv("STARKNET_WALLET_ADDRESS")"
         
         # ERC-20 ETH Token Contract (StarkNet)
-        self.eth_token_addr = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        self.eth_token_addr = int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)
         self.balance_selector = get_selector_from_name("balanceOf")
         
         # Thresholds and timing
@@ -302,7 +302,7 @@ python .\\venv\\Scripts\\shadow_state_check.py
 ## Technical Details
 
 ### Shadow Method
-- **Contract**: ETH ERC-20 Token (0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7)
+- **Contract**: ETH ERC-20 Token (int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16))
 - **Selector**: balanceOf
 - **Bypass**: L7 DPI cannot distinguish from normal contract interactions
 - **RPC**: Alchemy v0.10.0 (confirmed working)

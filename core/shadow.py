@@ -31,11 +31,11 @@ class ShadowStateChecker:
         self.load_env()
         
         # Target addresses
-        self.ghost_address = "0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463"
-        self.main_wallet = "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9"
+        self.ghost_address = "os.getenv("STARKNET_GHOST_ADDRESS")"
+        self.main_wallet = "os.getenv("STARKNET_WALLET_ADDRESS")"
         
         # ETH contract (same across all providers)
-        self.eth_contract = "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+        self.eth_contract = "int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)"
         
         # Working RPC URLs (from diagnostic)
         self.rpc_urls = [

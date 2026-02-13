@@ -23,7 +23,7 @@ def find_parameters():
     """Find the exact parameters that generate the target address"""
     
     # Target address
-    target_address = "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9"
+    target_address = "os.getenv("STARKNET_WALLET_ADDRESS")"
     target_int = int(target_address, 16)
     
     # Private key for public key calculation

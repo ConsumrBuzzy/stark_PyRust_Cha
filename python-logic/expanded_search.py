@@ -22,7 +22,7 @@ load_env()
 def expanded_search():
     """Extended search with more class hashes and salt ranges"""
     
-    target = 0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9
+    target = os.getenv("STARKNET_WALLET_ADDRESS")
     pk = int(os.getenv("STARKNET_PRIVATE_KEY"), 16)
     pub = KeyPair.from_private_key(pk).public_key
     

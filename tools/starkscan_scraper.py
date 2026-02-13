@@ -275,8 +275,8 @@ async def main():
     
     # Target addresses
     addresses = [
-        "0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463",  # Ghost
-        "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9",   # Main wallet
+        "os.getenv("STARKNET_GHOST_ADDRESS")",  # Ghost
+        "os.getenv("STARKNET_WALLET_ADDRESS")",   # Main wallet
     ]
     
     async with StarkScanScraper() as scraper:

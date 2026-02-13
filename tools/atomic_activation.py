@@ -77,11 +77,11 @@ class AtomicActivationEngine:
         self.private_key = os.getenv("STARKNET_PRIVATE_KEY")
         
         # Target addresses
-        self.ghost_address = "0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463"
+        self.ghost_address = "os.getenv("STARKNET_GHOST_ADDRESS")"
         
         # Contract addresses
-        self.eth_contract = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
-        self.argent_proxy_hash = 0x06d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b
+        self.eth_contract = int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)
+        self.argent_proxy_hash = int(os.getenv("STARKNET_ARGENT_PROXY_HASH", "0x06d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b"), 16)
         
         # Execution parameters
         self.max_fee = int(0.02e18)  # 0.02 ETH max fee

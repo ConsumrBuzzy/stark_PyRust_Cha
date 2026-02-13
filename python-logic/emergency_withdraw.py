@@ -79,7 +79,7 @@ rpc_manager = RPCManager()
 
 async def get_account_balance(client, address):
     """Check ETH balance for any address"""
-    eth_address = "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+    eth_address = "int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)"
     call = Call(
         to_addr=int(eth_address, 16),
         selector=get_selector_from_name("balanceOf"),
@@ -194,7 +194,7 @@ async def execute_emergency_withdraw(target_address):
             # 5. Transfer ETH
             console.print(f"[yellow]🚀 Transferring {withdraw_amount:.6f} ETH to {target_address}...[/yellow]")
             
-            eth_address = "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+            eth_address = "int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)"
             transfer_call = Call(
                 to_addr=int(eth_address, 16),
                 selector=get_selector_from_name("transfer"),

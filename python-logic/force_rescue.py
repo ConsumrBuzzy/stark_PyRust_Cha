@@ -97,8 +97,8 @@ async def rescue(target_address_hex, destination_address_hex, amount_wei=None):
 
 if __name__ == "__main__":
     # USER: Update these two addresses as needed
-    GHOST_ADDR = "0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463"
-    MAIN_ADDR = "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9"
+    GHOST_ADDR = "os.getenv("STARKNET_GHOST_ADDRESS")"
+    MAIN_ADDR = "os.getenv("STARKNET_WALLET_ADDRESS")"
     
     # Destination (Phantom Base Transit or Coinbase)
     # Defaulting to a placeholder for user to fill

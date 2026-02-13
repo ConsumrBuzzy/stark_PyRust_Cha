@@ -36,7 +36,7 @@ async def main():
         return
     
     # The discovered Argent Proxy class hash
-    proxy_class_hash = 0x06d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b
+    proxy_class_hash = int(os.getenv("STARKNET_ARGENT_PROXY_HASH", "0x06d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b"), 16)
     pk = int(private_key_str, 16)
     target = int(target_addr_str, 16)
     
@@ -81,7 +81,7 @@ async def main():
         from starknet_py.hash.selector import get_selector_from_name
         from starknet_py.net.client_models import Call
         
-        eth_address = "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+        eth_address = "int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)"
         call = Call(
             to_addr=int(eth_address, 16),
             selector=get_selector_from_name("balanceOf"),

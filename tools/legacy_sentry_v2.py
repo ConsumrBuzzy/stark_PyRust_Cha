@@ -30,7 +30,7 @@ class GhostSentryV2:
     def __init__(self):
         self.console = Console()
         self.setup_logging()
-        self.ghost_address = "0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463"
+        self.ghost_address = "os.getenv("STARKNET_GHOST_ADDRESS")"
         self.threshold_eth = 0.005
         self.poll_interval = 180  # 3 minutes
         
@@ -91,7 +91,7 @@ class GhostSentryV2:
             client = FullNodeClient(node_url=rpc_url)
             
             # ETH token contract
-            eth_contract = "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+            eth_contract = "int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)"
             
             # Build balanceOf call
             call = Call(
@@ -155,7 +155,7 @@ starkli invoke \\
   --network starknet-mainnet \\
   --account {self.ghost_address} \\
   --private-key {private_key} \\
-  0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7 \\
+  int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16) \\
   transfer \\
   {int(target_address, 16)} \\
   {int(sweep_amount * 1e18)}

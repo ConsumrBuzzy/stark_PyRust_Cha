@@ -19,14 +19,14 @@ def check_starknet_balance(address: str, label: str) -> dict:
     # Try multiple RPC endpoints from .env
     rpc_urls = [
         "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_10/9HtNv_yFeMgWsbW_gI2IN",
-        "https://rpc.starknet.lava.build:443", 
-        "https://1rpc.io/starknet",
-        "https://starknet.api.onfinality.io/public",
+        "os.getenv("STARKNET_LAVA_URL"):443", 
+        "os.getenv("STARKNET_1RPC_URL")",
+        "os.getenv("STARKNET_ONFINALITY_URL")",
         "https://starknet-mainnet.public.blastapi.io"
     ]
     
     # ETH token contract address on Starknet
-    eth_contract = "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+    eth_contract = "int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)"
     
     payload = {
         "jsonrpc": "2.0",
@@ -92,9 +92,9 @@ def check_deployment_status(address: str) -> dict:
     # Try multiple RPC endpoints
     rpc_urls = [
         "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_10/9HtNv_yFeMgWsbW_gI2IN",
-        "https://rpc.starknet.lava.build:443", 
-        "https://1rpc.io/starknet",
-        "https://starknet.api.onfinality.io/public",
+        "os.getenv("STARKNET_LAVA_URL"):443", 
+        "os.getenv("STARKNET_1RPC_URL")",
+        "os.getenv("STARKNET_ONFINALITY_URL")",
         "https://starknet-mainnet.public.blastapi.io"
     ]
     
@@ -138,7 +138,7 @@ def main():
     
     # Target addresses
     ghost_address = "0xfF01E0776369Ce51debb16DFb70F23c16d875463"
-    main_wallet = "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9"
+    main_wallet = "os.getenv("STARKNET_WALLET_ADDRESS")"
     
     console.print(f"Ghost Address: {ghost_address}")
     console.print(f"Main Wallet: {main_wallet}")

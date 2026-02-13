@@ -10,8 +10,8 @@ from starknet_py.net.signer.key_pair import KeyPair
 def ultimate_search():
     """Final exhaustive search with the exact private key"""
     
-    target_addr = 0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9
-    private_key_str = "0x06d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b"
+    target_addr = os.getenv("STARKNET_WALLET_ADDRESS")
+    private_key_str = "int(os.getenv("STARKNET_ARGENT_PROXY_HASH", "0x06d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b"), 16)"
     pk = int(private_key_str, 16)
     pub = KeyPair.from_private_key(pk).public_key
     

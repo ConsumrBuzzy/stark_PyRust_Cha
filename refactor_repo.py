@@ -268,7 +268,7 @@ class AccountActivator:
         self.rpc_url = os.getenv("STARKNET_MAINNET_URL")  # Alchemy
         
         # Argent proxy class hash (standard for most accounts)
-        self.argent_proxy_hash = 0x06d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b
+        self.argent_proxy_hash = int(os.getenv("STARKNET_ARGENT_PROXY_HASH", "0x06d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b"), 16)
         
         if not all([self.wallet_address, self.private_key, self.rpc_url]):
             raise ValueError("Missing required environment variables")

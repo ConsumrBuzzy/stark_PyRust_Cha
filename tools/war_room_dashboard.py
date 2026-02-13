@@ -39,8 +39,8 @@ class WarRoomDashboard:
         
         # StarkNet configuration from environment
         self.main_wallet = os.getenv("STARKNET_WALLET_ADDRESS")
-        self.ghost_address = "0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463"
-        self.eth_contract = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        self.ghost_address = "os.getenv("STARKNET_GHOST_ADDRESS")"
+        self.eth_contract = int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)
         
         # Validate configuration
         if not self.main_wallet:

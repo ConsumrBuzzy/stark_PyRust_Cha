@@ -15,7 +15,7 @@ load_env()
 
 async def get_class_hash():
     client = FullNodeClient(node_url=os.getenv('STARKNET_MAINNET_URL'))
-    address = '0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9'
+    address = 'os.getenv("STARKNET_WALLET_ADDRESS")'
     
     try:
         class_hash = await client.get_class_hash_at(contract_address=int(address, 16))

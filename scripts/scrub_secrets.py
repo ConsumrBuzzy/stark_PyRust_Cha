@@ -13,12 +13,12 @@ from typing import List, Dict, Tuple
 # Known secrets to scrub
 SECRETS_PATTERNS = {
     # StarkNet addresses
-    r'0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9': 'os.getenv("STARKNET_WALLET_ADDRESS")',
-    r'0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463': 'os.getenv("STARKNET_GHOST_ADDRESS")',
+    r'os.getenv("STARKNET_WALLET_ADDRESS")': 'os.getenv("STARKNET_WALLET_ADDRESS")',
+    r'os.getenv("STARKNET_GHOST_ADDRESS")': 'os.getenv("STARKNET_GHOST_ADDRESS")',
     
     # Contract addresses
-    r'0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7': 'int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)',
-    r'0x06d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b': 'int(os.getenv("STARKNET_ARGENT_PROXY_HASH", "0x06d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b"), 16)',
+    r'int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)': 'int(os.getenv("STARKNET_ETH_CONTRACT", "int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)"), 16)',
+    r'int(os.getenv("STARKNET_ARGENT_PROXY_HASH", "0x06d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b"), 16)': 'int(os.getenv("STARKNET_ARGENT_PROXY_HASH", "int(os.getenv("STARKNET_ARGENT_PROXY_HASH", "0x06d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b"), 16)"), 16)',
     
     # RPC URLs (partial patterns)
     r'https://starknet-mainnet\.g\.alchemy\.com/v2/[A-Za-z0-9]+': 'os.getenv("STARKNET_MAINNET_URL")',

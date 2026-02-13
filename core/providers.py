@@ -125,21 +125,21 @@ class NetworkSentinel:
             "getNonce": {
                 "method": "starknet_getNonce",
                 "params": {
-                    "contract_address": "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9",
+                    "contract_address": "os.getenv("STARKNET_WALLET_ADDRESS")",
                     "block_number": "latest"
                 }
             },
             "getClassHashAt": {
                 "method": "starknet_getClassHashAt",
                 "params": {
-                    "contract_address": "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9",
+                    "contract_address": "os.getenv("STARKNET_WALLET_ADDRESS")",
                     "block_number": "latest"
                 }
             },
             "getClassAt": {
                 "method": "starknet_getClassAt",
                 "params": {
-                    "contract_address": "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9",
+                    "contract_address": "os.getenv("STARKNET_WALLET_ADDRESS")",
                     "block_number": "latest"
                 }
             },
@@ -367,7 +367,7 @@ class NetworkSentinel:
     def analyze_main_wallet_status(self):
         """Deep analysis of main wallet deployment status"""
         
-        main_wallet = "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9"
+        main_wallet = "os.getenv("STARKNET_WALLET_ADDRESS")"
         
         self.console.print(Panel(
             f"[bold blue]🔍 MAIN WALLET DEEP ANALYSIS[/bold blue]\n"

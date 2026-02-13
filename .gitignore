@@ -126,3 +126,11 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Environment files with secrets
+.env.local
+.env.production
+# Secret backup files
+*.env.bak
+*.secrets
+# Private key files

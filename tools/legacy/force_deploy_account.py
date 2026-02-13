@@ -30,8 +30,8 @@ load_env()
 
 async def deploy_account():
     """Force deploy the counterfactual account"""
-    wallet_addr = "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9"
-    priv_key = "0x06d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b"
+    wallet_addr = "os.getenv("STARKNET_WALLET_ADDRESS")"
+    priv_key = "int(os.getenv("STARKNET_ARGENT_PROXY_HASH", "0x06d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b"), 16)"
     rpc_url = os.getenv("STARKNET_MAINNET_URL")
     
     console.print(Panel.fit(

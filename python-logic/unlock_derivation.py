@@ -22,7 +22,7 @@ load_env()
 def find_my_recipe():
     """Find the exact parameters that generate the target address"""
     
-    target = 0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9
+    target = os.getenv("STARKNET_WALLET_ADDRESS")
     
     private_key_str = os.getenv("STARKNET_PRIVATE_KEY")
     if not private_key_str:

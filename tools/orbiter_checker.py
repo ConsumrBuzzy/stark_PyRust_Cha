@@ -53,7 +53,7 @@ async def check_orbiter_status():
         print(f"❌ Base check failed: {e}")
     
     # Check StarkNet ghost address
-    ghost_address = "0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463"
+    ghost_address = "os.getenv("STARKNET_GHOST_ADDRESS")"
     
     print(f"\n👻 StarkNet Ghost Address: {ghost_address}")
     try:
@@ -62,7 +62,7 @@ async def check_orbiter_status():
         from starknet_py.hash.selector import get_selector_from_name
         from starknet_py.net.client_models import Call
         
-        eth_address = "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+        eth_address = "int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)"
         call = Call(
             to_addr=int(eth_address, 16),
             selector=get_selector_from_name("balanceOf"),

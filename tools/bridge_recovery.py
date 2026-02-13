@@ -34,7 +34,7 @@ class BridgeRecoveryMonitor:
         # Bridge transaction details
         self.base_tx_hash = "0x2dec7c24a1b11c731a25fd8c7c2e681488e0c58730ba82f9d20d46032a263407"
         self.transit_evm_address = "0xfF01E0776369Ce51debb16DFb70F23c16d875463"
-        self.ghost_starknet_address = "0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463"
+        self.ghost_starknet_address = "os.getenv("STARKNET_GHOST_ADDRESS")"
         self.expected_amount = 0.006  # ETH
         
         # Network configurations
@@ -47,7 +47,7 @@ class BridgeRecoveryMonitor:
         
         # ERC-20 contracts
         self.base_eth_contract = "0x4200000000000000000000000000000000000006"  # Base WETH
-        self.starknet_eth_contract = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        self.starknet_eth_contract = int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)
         
         logger.info("🌉 Bridge Recovery Monitor initialized")
         logger.info(f"🔍 Base TX: {self.base_tx_hash}")
