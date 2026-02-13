@@ -221,7 +221,7 @@ class AtomicActivationEngine:
             
             # Estimate fee
             fee_estimate = await client.estimate_fee(
-                calls=transfer_call,
+                call=transfer_call,
                 block_number="latest"
             )
             
