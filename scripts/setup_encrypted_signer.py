@@ -12,13 +12,13 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from core.safety import get_signer
-from rich.console import Console as console
+from rich.console import Console
 from loguru import logger
 
 def setup_encrypted_signer():
     """Setup encrypted signer with default password for demo"""
     
-    console = console()
+    console = Console()
     console.print("🔐 Encrypted Signer Setup", style="bold blue")
     console.print("Setting up professional key encryption...", style="dim")
     
