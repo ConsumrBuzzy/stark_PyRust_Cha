@@ -2,8 +2,6 @@ import sys
 import types
 from decimal import Decimal
 
-import pytest
-
 # Stub starknet_py modules used by ghost_monitor
 if "starknet_py" not in sys.modules:
     starknet_py = types.ModuleType("starknet_py")
@@ -57,8 +55,7 @@ def test_sweep_recommended():
     assert ghost_monitor.sweep_recommended(Decimal("0.4"), settings) is False
 
 
-@pytest.mark.asyncio
-async def test_balance_with_rotation_uses_stub_client():
+def test_balance_with_rotation_uses_stub_client():
     settings = GhostSettings(
         ghost_address="0x1",
         main_address="0x2",
@@ -66,8 +63,10 @@ async def test_balance_with_rotation_uses_stub_client():
         rpc_urls=["http://fake-rpc"],
         eth_contract=1,
     )
-    bal, rpc = await ghost_monitor.balance_with_rotation(
-        settings.ghost_address, settings.rpc_urls, settings.eth_contract
+    bal, rpc = asyncio.run(
+        ghost_monitor.balance_with_rotation(
+            settings.ghost_address, settings.rpc_urls, settings.eth_contract
+        )
     )
     assert bal == Decimal("1")
     assert rpc == "http://fake-rpc"
