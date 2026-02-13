@@ -109,10 +109,13 @@ class AtomicActivationEngine:
         """Check current StarkNet balance"""
         
         # Try multiple providers to find a working one
-        providers = self.provider_factory.providers
+        provider_configs = self.provider_factory.providers
         
-        for provider_name, client in providers.items():
+        for provider_name, config in provider_configs.items():
             try:
+                # Get the actual client from the provider factory
+                _, client = self.provider_factory.get_provider_by_name(provider_name)
+                
                 # Check balance using call_contract
                 from starknet_py.hash.selector import get_selector_from_name
                 from starknet_py.net.client_models import Call
