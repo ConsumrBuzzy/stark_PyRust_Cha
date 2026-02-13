@@ -124,14 +124,46 @@ class NetworkSentinel:
             "getNonce": {
                 "method": "starknet_getNonce",
                 "params": {
-                    "contract_address": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+                    "contract_address": "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9",
+                    "block_number": "latest"
+                }
+            },
+            "getClassHashAt": {
+                "method": "starknet_getClassHashAt",
+                "params": {
+                    "contract_address": "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9",
                     "block_number": "latest"
                 }
             },
             "getClassAt": {
                 "method": "starknet_getClassAt",
                 "params": {
-                    "contract_address": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+                    "contract_address": "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9",
+                    "block_number": "latest"
+                }
+            },
+            "chainId": {
+                "method": "starknet_chainId",
+                "params": []
+            },
+            "syncing": {
+                "method": "starknet_syncing",
+                "params": []
+            },
+            "estimateFee": {
+                "method": "starknet_estimateFee",
+                "params": {
+                    "request": {
+                        "type": "INVOKE",
+                        "max_fee": "0x0",
+                        "version": "0x1",
+                        "signature": [],
+                        "nonce": "0x0",
+                        "calldata": [
+                            "0x1",
+                            "0x83afd3f4caedc6eebf44246fe54e38c95e3179a5ec9ea81740eca5b482d12e"
+                        ]
+                    },
                     "block_number": "latest"
                 }
             }
@@ -153,11 +185,37 @@ class NetworkSentinel:
                     async with session.post(url, json=payload) as response:
                         if response.status == 200:
                             data = await response.json()
-                            results[method_name] = "✅"
+                            if "result" in data:
+                                result = data["result"]
+                                
+                                # Special handling for different result types
+                                if method_name == "getClassHashAt":
+                                    results[method_name] = "✅" if result and result != "0x0" else "⚪ EMPTY"
+                                elif method_name == "getNonce":
+                                    results[method_name] = f"✅ {result}" if result != "0x0" else "⚪ 0x0"
+                                elif method_name == "chainId":
+                                    results[method_name] = f"✅ {result}"
+                                elif method_name == "syncing":
+                                    results[method_name] = "✅ SYNCED" if not result.get("syncing") else "⚠️ SYNCING"
+                                elif method_name == "estimateFee":
+                                    if isinstance(result, dict) and "overall_fee" in result:
+                                        results[method_name] = f"✅ {result['overall_fee']}"
+                                    else:
+                                        results[method_name] = "✅ COMPLEX"
+                                else:
+                                    results[method_name] = "✅"
+                            else:
+                                results[method_name] = "❌ NO_RESULT"
                         else:
                             results[method_name] = f"❌ {response.status}"
-            except Exception:
-                results[method_name] = "⚠️"
+            except Exception as e:
+                error_msg = str(e)[:20]
+                if "timeout" in error_msg.lower():
+                    results[method_name] = "⏱️ TIMEOUT"
+                elif "403" in error_msg:
+                    results[method_name] = "🚫 BLOCKED"
+                else:
+                    results[method_name] = "⚠️ ERROR"
         
         return results
     
@@ -230,11 +288,15 @@ class NetworkSentinel:
         
         # Advanced method support (if available)
         if any(hasattr(r, 'advanced_methods') for r in self.results):
-            advanced_table = Table(title="Advanced Method Support")
+            advanced_table = Table(title="Advanced Method Support Matrix")
             advanced_table.add_column("Provider", style="cyan")
             advanced_table.add_column("blockNumber", justify="center")
             advanced_table.add_column("getNonce", justify="center")
+            advanced_table.add_column("getClassHashAt", justify="center")
             advanced_table.add_column("getClassAt", justify="center")
+            advanced_table.add_column("chainId", justify="center")
+            advanced_table.add_column("syncing", justify="center")
+            advanced_table.add_column("estimateFee", justify="center")
             
             for result in self.results:
                 if hasattr(result, 'advanced_methods'):
@@ -243,10 +305,17 @@ class NetworkSentinel:
                         result.name,
                         methods.get("blockNumber", "❌"),
                         methods.get("getNonce", "❌"),
-                        methods.get("getClassAt", "❌")
+                        methods.get("getClassHashAt", "❌"),
+                        methods.get("getClassAt", "❌"),
+                        methods.get("chainId", "❌"),
+                        methods.get("syncing", "❌"),
+                        methods.get("estimateFee", "❌")
                     )
             
             self.console.print(advanced_table)
+            
+            # Deep analysis of main wallet status
+            self.analyze_main_wallet_status()
         
         # Summary panel
         success_rate = (online_count / len(self.results)) * 100 if self.results else 0
