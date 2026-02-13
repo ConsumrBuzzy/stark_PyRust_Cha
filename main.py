@@ -40,6 +40,16 @@ async def main():
         await check_status()
     elif args.resume:
         await resume_recovery()
+    elif args.stargate_watch:
+        await execute_stargate_watch(args)
+    elif args.ghost_sentry:
+        await execute_ghost_sentry(args)
+    elif args.bridge_recovery:
+        await execute_bridge_recovery(args)
+    elif args.advanced_tracking:
+        await execute_advanced_tracking(args)
+    elif args.list_modes:
+        await list_available_modes()
     else:
         parser.print_help()
 
@@ -152,6 +162,125 @@ async def resume_recovery():
             
     except Exception as e:
         print(f"❌ Resume failed: {e}")
+
+async def execute_stargate_watch(args):
+    """Execute StarkGate watch mode"""
+    print("🔍 PyPro Systems - StarkGate Watch Mode")
+    print("=" * 50)
+    
+    starknet_address = args.starknet_address or "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9"
+    
+    # Initialize kernel
+    kernel = RecoveryKernel("0xbd5fdCDc18FA0B0764861996CC9482f0526EEDd9", starknet_address)
+    
+    if await kernel.initialize():
+        try:
+            result = await kernel.start_stargate_watch()
+            if result.get("success"):
+                print("🎉 StarkGate watch completed successfully!")
+            else:
+                print(f"❌ StarkGate watch failed: {result.get('error')}")
+        finally:
+            await kernel.shutdown()
+    else:
+        print("❌ Failed to initialize kernel")
+
+async def execute_ghost_sentry(args):
+    """Execute Ghost Sentry mode"""
+    print("👻 PyPro Systems - Ghost Sentry Mode")
+    print("=" * 50)
+    
+    ghost_address = args.ghost_address or os.getenv("STARKNET_GHOST_ADDRESS")
+    main_wallet = args.main_wallet or os.getenv("STARKNET_WALLET_ADDRESS")
+    
+    if not ghost_address or not main_wallet:
+        print("❌ Ghost address and main wallet required")
+        return
+    
+    # Initialize kernel
+    kernel = RecoveryKernel("0xbd5fdCDc18FA0B0764861996CC9482f0526EEDd9", main_wallet)
+    
+    if await kernel.initialize():
+        try:
+            result = await kernel.start_ghost_sentry(ghost_address, main_wallet)
+            if result.get("success"):
+                print("🎉 Ghost Sentry completed successfully!")
+            else:
+                print(f"❌ Ghost Sentry failed: {result.get('error')}")
+        finally:
+            await kernel.shutdown()
+    else:
+        print("❌ Failed to initialize kernel")
+
+async def execute_bridge_recovery(args):
+    """Execute Bridge Recovery mode"""
+    print("🔄 PyPro Systems - Bridge Recovery Mode")
+    print("=" * 50)
+    
+    bridge_tx_hash = args.bridge_recovery
+    starknet_address = "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9"
+    
+    # Initialize kernel
+    kernel = RecoveryKernel("0xbd5fdCDc18FA0B0764861996CC9482f0526EEDd9", starknet_address)
+    
+    if await kernel.initialize():
+        try:
+            result = await kernel.start_bridge_recovery(bridge_tx_hash)
+            if result.get("success"):
+                print("🎉 Bridge Recovery completed successfully!")
+            else:
+                print(f"❌ Bridge Recovery failed: {result.get('error')}")
+        finally:
+            await kernel.shutdown()
+    else:
+        print("❌ Failed to initialize kernel")
+
+async def execute_advanced_tracking(args):
+    """Execute Advanced Tracking mode"""
+    print("🔍 PyPro Systems - Advanced Tracking Mode")
+    print("=" * 50)
+    
+    tx_hash = args.advanced_tracking
+    starknet_address = "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9"
+    
+    # Initialize kernel
+    kernel = RecoveryKernel("0xbd5fdCDc18FA0B0764861996CC9482f0526EEDd9", starknet_address)
+    
+    if await kernel.initialize():
+        try:
+            result = await kernel.start_advanced_tracking(tx_hash)
+            if result.get("success"):
+                print("🎉 Advanced Tracking completed successfully!")
+            else:
+                print(f"❌ Advanced Tracking failed: {result.get('error')}")
+        finally:
+            await kernel.shutdown()
+    else:
+        print("❌ Failed to initialize kernel")
+
+async def list_available_modes():
+    """List available monitoring modes"""
+    print("📋 Available Monitoring Modes")
+    print("=" * 30)
+    
+    # Initialize kernel to get modes
+    kernel = RecoveryKernel("0xbd5fdCDc18FA0B0764861996CC9482f0526EEDd9", "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9")
+    
+    if await kernel.initialize():
+        modes = kernel.get_available_modes()
+        print("Available modes:")
+        for mode in modes:
+            print(f"  - {mode}")
+        
+        print("\nUsage examples:")
+        print("  python main.py --stargate-watch")
+        print("  python main.py --ghost-sentry --ghost-address <addr> --main-wallet <addr>")
+        print("  python main.py --bridge-recovery <tx_hash>")
+        print("  python main.py --advanced-tracking <tx_hash>")
+        
+        await kernel.shutdown()
+    else:
+        print("❌ Failed to initialize kernel")
 
 if __name__ == "__main__":
     asyncio.run(main())
