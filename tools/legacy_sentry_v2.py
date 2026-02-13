@@ -12,17 +12,22 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-# Add python-logic to path for existing modules
-sys.path.append(os.path.join(os.getcwd(), 'python-logic'))
+# Add repo root to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from loguru import logger
 from rich.console import Console
 from rich.panel import Panel
 from rich.live import Live
 from rich.table import Table
-from starknet_py.net.full_node_client import FullNodeClient
-from starknet_py.hash.selector import get_selector_from_name
-from starknet_py.net.client_models import Call
+
+from src.ops.ghost_monitor import (
+    GhostSettings,
+    balance_with_rotation,
+    load_settings,
+    sweep_recommended,
+)
+from src.ops.reporting_ops import send_pulse
 
 class GhostSentryV2:
     """Advanced Ghost monitoring under network blackout conditions"""
@@ -30,28 +35,17 @@ class GhostSentryV2:
     def __init__(self):
         self.console = Console()
         self.setup_logging()
-        self.ghost_address = "os.getenv("STARKNET_GHOST_ADDRESS")"
-        self.threshold_eth = 0.005
+
+        self.settings: GhostSettings = load_settings()
+        self.threshold_eth = float(self.settings.ghost_threshold_eth)
         self.poll_interval = 180  # 3 minutes
-        
-        # Load environment
-        self.load_env()
-        
-        # RPC configuration - prioritize working endpoints
-        self.rpc_urls = [
-            os.getenv("STARKNET_MAINNET_URL"),  # Alchemy (confirmed working)
-            os.getenv("STARKNET_LAVA_URL"),     # Lava (backup)
-            os.getenv("STARKNET_1RPC_URL"),     # 1RPC (backup)
-            os.getenv("STARKNET_ONFINALITY_URL") # OnFinality (backup)
-        ]
-        self.rpc_urls = [url for url in self.rpc_urls if url]
-        
-        if not self.rpc_urls:
+
+        if not self.settings.rpc_urls:
             logger.error("❌ No RPC URLs found in environment")
             sys.exit(1)
-        
-        logger.info(f"🔧 Sentry initialized with {len(self.rpc_urls)} RPC endpoints")
-        logger.info(f"👻 Monitoring Ghost: {self.ghost_address}")
+
+        logger.info(f"🔧 Sentry initialized with {len(self.settings.rpc_urls)} RPC endpoints")
+        logger.info(f"👻 Monitoring Ghost: {self.settings.ghost_address}")
         logger.info(f"💰 Threshold: {self.threshold_eth} ETH")
     
     def setup_logging(self):
@@ -84,45 +78,15 @@ class GhostSentryV2:
                         key, value = line.strip().split("=", 1)
                         os.environ[key.strip()] = value.strip()
     
-    async def check_balance_rpc(self, rpc_url: str) -> Optional[float]:
-        """Check Ghost balance via specific RPC endpoint"""
-        
-        try:
-            client = FullNodeClient(node_url=rpc_url)
-            
-            # ETH token contract
-            eth_contract = "int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)"
-            
-            # Build balanceOf call
-            call = Call(
-                to_addr=int(eth_contract, 16),
-                selector=get_selector_from_name("balanceOf"),
-                calldata=[int(self.ghost_address, 16)]
-            )
-            
-            # Execute call
-            result = await client.call_contract(call)
-            balance_wei = result[0]
-            balance_eth = balance_wei / 1e18
-            
-            return balance_eth
-            
-        except Exception as e:
-            logger.warning(f"⚠️ RPC Error ({rpc_url[:30]}...): {str(e)[:50]}")
-            return None
-    
     async def check_balance_with_rotation(self) -> Optional[float]:
-        """Check balance with RPC rotation"""
-        
-        for rpc_url in self.rpc_urls:
-            balance = await self.check_balance_rpc(rpc_url)
-            if balance is not None:
-                provider_name = self.get_provider_name(rpc_url)
-                logger.info(f"✅ Success via {provider_name}")
-                return balance
-        
-        logger.error("❌ All RPC endpoints failed")
-        return None
+        bal, rpc = await balance_with_rotation(
+            self.settings.ghost_address, self.settings.rpc_urls, self.settings.eth_contract
+        )
+        if bal is not None and rpc:
+            logger.info(f"✅ Success via {self.get_provider_name(rpc)}")
+        if bal is None:
+            logger.error("❌ All RPC endpoints failed")
+        return float(bal) if bal is not None else None
     
     def get_provider_name(self, rpc_url: str) -> str:
         """Extract provider name from URL"""
@@ -169,39 +133,16 @@ python .\\venv\\Scripts\\rescue_funds.py --sweep --confirm
     def send_telegram_notification(self, balance_eth: float):
         """Send Telegram notification if configured"""
         
-        bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-        chat_id = os.getenv("TELEGRAM_CHAT_ID")
-        
-        if not bot_token or not chat_id:
-            logger.info("📱 Telegram not configured")
-            return
-        
+        message = (
+            f"🎉 GHOST FUNDS DETECTED!\n\n"
+            f"💰 Balance: {balance_eth:.6f} ETH\n"
+            f"💵 Value: ${balance_eth * 2200:.2f} USD\n"
+            f"👻 Address: {self.settings.ghost_address}\n"
+            f"⏰ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            "Ready for sweep execution!"
+        )
         try:
-            import requests
-            
-            message = f"""🎉 GHOST FUNDS DETECTED!
-            
-💰 Balance: {balance_eth:.6f} ETH
-💵 Value: ${balance_eth * 2200:.2f} USD
-👻 Address: {self.ghost_address}
-⏰ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-Ready for sweep execution!
-"""
-            
-            url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-            data = {
-                "chat_id": chat_id,
-                "text": message,
-                "parse_mode": "HTML"
-            }
-            
-            response = requests.post(url, json=data, timeout=10)
-            if response.status_code == 200:
-                logger.success("📱 Telegram notification sent")
-            else:
-                logger.warning(f"📱 Telegram failed: {response.status_code}")
-                
+            asyncio.run(send_pulse("GHOST_FUNDS", message))
         except Exception as e:
             logger.warning(f"📱 Telegram error: {e}")
     
