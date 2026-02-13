@@ -26,8 +26,10 @@ from starknet_py.net.signer.key_pair import KeyPair
 from starknet_py.hash.selector import get_selector_from_name
 from starknet_py.net.client_models import Call
 
-# Import factory
+# Import core components
 from core.factory import get_provider_factory
+from core.safety import get_signer
+from core.ui import get_dashboard
 
 class ExecutionStatus(Enum):
     """Atomic execution status"""
@@ -71,12 +73,11 @@ class AtomicActivationEngine:
         self.console = Console()
         self.load_environment()
         self.provider_factory = get_provider_factory()
+        self.signer = get_signer()
+        self.dashboard = get_dashboard()
         
         # Account configuration
         self.wallet_address = os.getenv("STARKNET_WALLET_ADDRESS")
-        self.private_key = os.getenv("STARKNET_PRIVATE_KEY")
-        
-        # Target addresses
         self.ghost_address = os.getenv("STARKNET_GHOST_ADDRESS")
         
         # Contract addresses
@@ -86,6 +87,11 @@ class AtomicActivationEngine:
         # Execution parameters
         self.max_fee = int(0.02e18)  # 0.02 ETH max fee
         self.transfer_amount = int(0.001e18)  # 0.001 ETH initial transfer
+        self.activation_threshold = 0.018  # ETH threshold for auto-trigger
+        
+        # Auto-trigger state
+        self.master_password = None
+        self.auto_trigger_enabled = False
         
         logger.info("⚛️ Atomic Activation Engine initialized")
     
