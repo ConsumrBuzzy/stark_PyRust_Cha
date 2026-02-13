@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from src.ops.env import build_config
 from src.ops.network_checks import ensure_oracle
+from src.ops.reporting_ops import send_pulse, test_telegram_connection
 from src.foundation.reporting import ReportingSystem
 
 async def full_auto_suite_test():
@@ -54,8 +55,7 @@ async def full_auto_suite_test():
         
         # Test local connectivity (may fail due to network)
         try:
-            await reporting.telegram.send_alert('SUITE_TEST', 'Full-Auto Suite Integration Test')
-            print('   ✅ Telegram connectivity: WORKING')
+            await send_pulse('SUITE_TEST', 'Full-Auto Suite Integration Test', reporting=reporting)
         except Exception as e:
             print(f'   ⚠️  Telegram connectivity: ISSUE ({e})')
             print('   📝 Note: This may be a local network issue, GitHub Actions will have different connectivity')
