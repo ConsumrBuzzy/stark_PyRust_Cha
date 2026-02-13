@@ -63,14 +63,30 @@ async def watchdog_log():
             # Safety alerts
             if not gas_safe:
                 print(f'   ⚠️  GAS ALERT: Price exceeds 100 Gwei ceiling!')
+                if reporting_system.is_enabled():
+                    await reporting_system.gas_spike_alert(gas_price, 100)
             
             if threshold_met:
                 print(f'   🎯 THRESHOLD REACHED: Full-Auto will execute Genesis Bundle!')
                 break
             
+            # Send heartbeat to Telegram every 5 minutes (300 seconds)
+            if int(time.time()) % 300 == 0:  # Every 5 minutes
+                if reporting_system.is_enabled():
+                    status_data = {
+                        'status': 'WAITING' if not threshold_met else 'READY',
+                        'starknet_balance': f'{starknet_balance:.6f} ETH',
+                        'phantom_balance': f'{phantom_balance:.6f} ETH',
+                        'gas_price': f'{gas_price} Gwei',
+                        'threshold_met': threshold_met
+                    }
+                    await reporting_system.send_heartbeat(status_data)
+            
             # Check for errors
             if recovery_state and recovery_state.current_phase == "mission_failed":
                 print(f'   ❌ MISSION FAILED: Manual review required!')
+                if reporting_system.is_enabled():
+                    await reporting_system.mission_failed("Unknown error", recovery_state.current_phase)
                 break
             
             print('-' * 60)
