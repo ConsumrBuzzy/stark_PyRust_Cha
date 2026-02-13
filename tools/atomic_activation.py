@@ -105,15 +105,191 @@ class AtomicActivationEngine:
                         key, value = line.strip().split("=", 1)
                         os.environ[key.strip()] = value.strip()
     
+    async def check_starknet_balance(self) -> Dict[str, Any]:
+        """Check current StarkNet balance"""
+        
+        try:
+            # Get best provider
+            provider_name, client = self.provider_factory.get_best_provider()
+            
+            # Check balance
+            from starknet_py.hash.selector import get_selector_from_name
+            from starknet_py.net.client_models import Call
+            
+            call = Call(
+                to_addr=self.eth_contract,
+                selector=get_selector_from_name("balanceOf"),
+                calldata=[int(self.wallet_address, 16)]
+            )
+            
+            result = await client.call_contract(call)
+            balance = result[0] / 1e18
+            
+            return {
+                "balance": balance,
+                "provider": provider_name,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Balance check failed: {e}")
+            return {"balance": 0, "error": str(e)}
+    
+    def prompt_master_password(self) -> bool:
+        """Prompt for master signer password"""
+        
+        try:
+            import getpass
+            
+            self.console.print("\n🔐 [SECURITY] Master Signer Password Required", style="bold yellow")
+            self.console.print("This password unlocks the encrypted private key for atomic execution.")
+            
+            password = getpass.getpass("Enter Master Signer Password: ")
+            confirm = getpass.getpass("Confirm Password: ")
+            
+            if password != confirm:
+                self.console.print("❌ Passwords do not match!", style="bold red")
+                return False
+            
+            if not password:
+                self.console.print("❌ Password cannot be empty!", style="bold red")
+                return False
+            
+            # Test password by trying to get signer
+            os.environ["SIGNER_PASSWORD"] = password
+            try:
+                keypair = self.signer.get_keypair()
+                self.master_password = password
+                self.auto_trigger_enabled = True
+                
+                self.console.print("✅ Master password accepted. Auto-trigger enabled.", style="bold green")
+                self.console.print("🔑 Private key unlocked and held in volatile memory.")
+                
+                return True
+                
+            except Exception as e:
+                self.console.print(f"❌ Invalid password: {e}", style="bold red")
+                return False
+                
+        except Exception as e:
+            logger.error(f"❌ Password prompt failed: {e}")
+            return False
+    
+    async def auto_trigger_monitor(self) -> None:
+        """High-frequency poll for auto-trigger execution"""
+        
+        self.console.print("🚀 Auto-Trigger Monitor Active", style="bold green")
+        self.console.print(f"🎯 Watching for balance ≥ {self.activation_threshold} ETH")
+        self.console.print("⏱️  Checking every 10 seconds...")
+        
+        while self.auto_trigger_enabled:
+            try:
+                # Check balance
+                balance_result = await self.check_starknet_balance()
+                current_balance = balance_result.get("balance", 0)
+                
+                # Update dashboard
+                self.dashboard.update_state({
+                    "starknet_balance": current_balance,
+                    "activation_threshold": self.activation_threshold,
+                    "auto_trigger_active": True
+                })
+                
+                # Display status
+                self.console.print(f"💰 Current Balance: {current_balance:.6f} ETH", end="\r")
+                
+                # Check threshold
+                if current_balance >= self.activation_threshold:
+                    self.console.print(f"\n🎯 THRESHOLD REACHED: {current_balance:.6f} ETH ≥ {self.activation_threshold} ETH")
+                    self.console.print("🚀 EXECUTING ATOMIC ACTIVATION...")
+                    
+                    # Execute atomic activation
+                    bundle = await self.create_deployment_bundle()
+                    result = await self.execute_atomic_bundle(bundle)
+                    
+                    if result.status == ExecutionStatus.CONFIRMED:
+                        self.console.print("🎉 MISSION SUCCESS: FUNDS SECURED", style="bold green")
+                        
+                        # Log to recovery complete
+                        await self.log_recovery_success(result)
+                        
+                        # Update dashboard
+                        self.dashboard.update_state({
+                            "mission_status": "SUCCESS",
+                            "activation_tx": result.transaction_hash,
+                            "final_balance": current_balance
+                        })
+                        
+                    else:
+                        self.console.print(f"❌ Activation failed: {result.error_message}", style="bold red")
+                    
+                    # Stop monitoring
+                    self.auto_trigger_enabled = False
+                    break
+                
+                await asyncio.sleep(10)  # 10-second poll
+                
+            except KeyboardInterrupt:
+                self.console.print("\n🛑 Auto-trigger monitor stopped by user")
+                break
+            except Exception as e:
+                logger.error(f"❌ Monitor error: {e}")
+                await asyncio.sleep(10)
+    
+    async def log_recovery_success(self, result: ExecutionResult) -> None:
+        """Log successful recovery to docs/RECOVERY_COMPLETE.md"""
+        
+        try:
+            recovery_log = f"""# StarkNet Recovery Complete - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+## Mission Success: Atomic Activation Completed
+
+### Execution Details
+- **Status**: {result.status.value}
+- **Transaction Hash**: {result.transaction_hash}
+- **Block Number**: {result.block_number}
+- **Gas Used**: {result.gas_used}
+- **Execution Time**: {result.execution_time:.2f}s
+
+### Financial Summary
+- **Activation Threshold**: {self.activation_threshold} ETH
+- **Final Balance**: Successfully deployed and funded
+- **Security**: Enterprise-grade encrypted signer used
+
+### Infrastructure Used
+- **Bridge**: StarkGate canonical L1→L2 bridge
+- **Provider**: {self.provider_factory.get_best_provider()[0]}
+- **Security**: Encrypted signer with master password
+
+### Next Steps
+- Account is now deployed and operational
+- Funds are secured in the system
+- Ready for normal operations
+
+---
+*Automated recovery by StarkNet Shadow Protocol*
+"""
+            
+            # Write to recovery log
+            recovery_path = Path(__file__).parent.parent / "docs" / "RECOVERY_COMPLETE.md"
+            recovery_path.parent.mkdir(exist_ok=True)
+            
+            with open(recovery_path, "w", encoding="utf-8") as f:
+                f.write(recovery_log)
+            
+            logger.info("📝 Recovery logged to docs/RECOVERY_COMPLETE.md")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to log recovery: {e}")
+    
     async def create_deployment_bundle(self) -> AtomicBundle:
         """Create atomic bundle for account deployment"""
         
         # Get best provider
         provider_name, client = self.provider_factory.get_best_provider()
         
-        # Create key pair
-        private_key_int = int(self.private_key, 16)
-        key_pair = KeyPair.from_private_key(private_key_int)
+        # Get key pair from encrypted signer
+        keypair = self.signer.get_keypair()
         
         # Convert address to int
         address_int = int(self.wallet_address, 16)
