@@ -339,27 +339,47 @@ class AtomicActivationEngine:
         await self.auto_trigger_monitor()
     
     async def auto_trigger_monitor(self) -> None:
-        """High-frequency poll for auto-trigger execution"""
+        """Infrastructure-grade back-off polling for auto-trigger execution"""
         
         self.console.print("🚀 Auto-Trigger Monitor Active", style="bold green")
         self.console.print(f"🎯 Watching for balance ≥ {self.activation_threshold} ETH")
-        self.console.print("⏱️  Checking every 10 seconds...")
+        self.console.print("⏱️  Using back-off polling: 1 minute intervals until funds detected")
+        
+        # Back-off polling strategy
+        poll_interval = 60  # Start with 1 minute intervals
+        funds_detected = False
         
         while self.auto_trigger_enabled:
             try:
                 # Check balance
                 balance_result = await self.check_starknet_balance()
-                current_balance = balance_result.get("balance", 0)
+                current_balance = balance_result.get("balance")
                 
-                # Update dashboard
-                self.dashboard.update_state({
-                    "starknet_balance": current_balance,
-                    "activation_threshold": self.activation_threshold,
-                    "auto_trigger_active": True
-                })
-                
-                # Display status
-                self.console.print(f"💰 Current Balance: {current_balance:.6f} ETH", end="\r")
+                if current_balance is not None:
+                    # Real balance data available
+                    self.console.print(f"💰 Current Balance: {current_balance:.6f} ETH")
+                    
+                    # Update dashboard
+                    self.dashboard.update_state({
+                        "starknet_balance": current_balance,
+                        "activation_threshold": self.activation_threshold,
+                        "auto_trigger_active": True
+                    })
+                    
+                    if not funds_detected:
+                        # First time detecting real data - switch to high-frequency
+                        funds_detected = True
+                        poll_interval = 10  # Switch to 10-second intervals
+                        self.console.print("📡 Real-time data detected - switching to high-frequency polling", style="bold yellow")
+                else:
+                    # No balance data available - keep back-off polling
+                    if funds_detected:
+                        # Lost connection after detecting funds - urgent retry
+                        poll_interval = 5
+                        self.console.print("⚠️ Connection lost - urgent retry mode", style="bold red")
+                    else:
+                        self.console.print(f"⏳ Balance check pending: {balance_result.get('error', 'Unknown error')}")
+                    current_balance = 0  # Set to 0 for threshold check
                 
                 # Check threshold
                 if current_balance >= self.activation_threshold:
