@@ -19,7 +19,9 @@ if env_path.exists():
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.foundation.network import NetworkOracle
+from src.ops.env import build_config
+from src.ops.network_checks import ensure_oracle
+from src.ops.reporting_ops import send_pulse
 from src.foundation.state import StateRegistry
 from src.foundation.reporting import ReportingSystem
 
@@ -29,11 +31,11 @@ async def full_system_test():
     
     # Test 1: Network Oracle
     print('1️⃣ Testing Network Oracle...')
-    oracle = NetworkOracle()
-    await oracle.initialize()
+    config = build_config()
+    oracle = await ensure_oracle()
     
-    phantom_balance = await oracle.get_balance('0xbd5fdCDc18FA0B0764861996CC9482f0526EEDd9', 'base')
-    starknet_balance = await oracle.get_balance('0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9', 'starknet')
+    phantom_balance = await oracle.get_balance(config.phantom_address, 'base')
+    starknet_balance = await oracle.get_balance(config.starknet_address, 'starknet')
     
     print(f'   ✅ Phantom: {phantom_balance:.6f} ETH')
     print(f'   ✅ StarkNet: {starknet_balance:.6f} ETH')
@@ -67,7 +69,7 @@ async def full_system_test():
         print('   ✅ System heartbeat sent')
         
         # Send test alert
-        await reporting.telegram.send_alert('SYSTEM TEST', 'Full system integration test completed successfully!')
+        await send_pulse('SYSTEM TEST', 'Full system integration test completed successfully!', reporting=reporting)
         print('   ✅ Test alert sent')
         
     else:
