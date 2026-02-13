@@ -173,10 +173,10 @@ class AtomicActivationEngine:
             # Get private key for Base wallet (Phantom)
             phantom_private_key = os.getenv("PHANTOM_BASE_PRIVATE_KEY")
             if not phantom_private_key:
-                # Try to get from Solana Phantom data
-                phantom_private_key = os.getenv("PHANTOM_SOLANA_PRIVATE_KEY")
+                # Try to get from Solana Phantom data (Phantom uses same seed for EVM and Solana)
+                phantom_private_key = os.getenv("SOLANA_PRIVATE_KEY")
                 if not phantom_private_key:
-                    raise Exception("PHANTOM_BASE_PRIVATE_KEY not found in environment")
+                    raise Exception("Neither PHANTOM_BASE_PRIVATE_KEY nor SOLANA_PRIVATE_KEY found in environment")
             
             # Use Phantom Base address instead of Transit
             phantom_address = self.phantom_base_address
