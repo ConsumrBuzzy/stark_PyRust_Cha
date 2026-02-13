@@ -81,6 +81,14 @@ class AtomicActivationEngine:
         # Account configuration
         self.wallet_address = os.getenv("STARKNET_WALLET_ADDRESS")
         self.ghost_address = os.getenv("STARKNET_GHOST_ADDRESS")
+        self.phantom_base_address = os.getenv("PHANTOM_BASE_ADDRESS")
+        
+        if not self.phantom_base_address:
+            # Try to get from transit address
+            self.phantom_base_address = os.getenv("TRANSIT_EVM_ADDRESS")
+        
+        if not self.phantom_base_address:
+            raise ValueError("PHANTOM_BASE_ADDRESS or TRANSIT_EVM_ADDRESS not found in environment")
         
         # Contract addresses
         self.eth_contract = int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)
@@ -127,6 +135,92 @@ class AtomicActivationEngine:
                     if "=" in line and not line.startswith("#"):
                         key, value = line.strip().split("=", 1)
                         os.environ[key.strip()] = value.strip()
+    
+    async def check_phantom_balance(self) -> Dict[str, Any]:
+        """Check Phantom wallet balance on Base network"""
+        
+        try:
+            balance_wei = self.base_web3.eth.get_balance(self.phantom_base_address)
+            balance_eth = self.base_web3.from_wei(balance_wei, 'ether')
+            
+            return {
+                "balance": float(balance_eth),
+                "balance_wei": balance_wei,
+                "address": self.phantom_base_address,
+                "provider": "Base mainnet"
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to check Phantom balance: {e}")
+            return {"balance": 0, "error": str(e)}
+    
+    async def execute_starkgate_bridge(self) -> Dict[str, Any]:
+        """Execute StarkGate bridge from Base to StarkNet"""
+        
+        try:
+            self.console.print("🌉 EXECUTING STARKGATE BRIDGE", style="bold blue")
+            self.console.print(f"📍 From: {self.phantom_base_address}")
+            self.console.print(f"📍 To: {self.wallet_address}")
+            self.console.print(f"💰 Amount: {self.bridge_amount} ETH")
+            
+            # Check balance
+            balance_result = await self.check_phantom_balance()
+            current_balance = balance_result["balance"]
+            
+            if current_balance < self.bridge_amount:
+                raise Exception(f"Insufficient balance: {current_balance:.6f} ETH < {self.bridge_amount:.6f} ETH")
+            
+            # Get private key for Base wallet
+            private_key = os.getenv("TRANSIT_EVM_PRIVATE_KEY")
+            if not private_key:
+                raise Exception("TRANSIT_EVM_PRIVATE_KEY not found in environment")
+            
+            # Create transaction
+            starkgate_contract = self.base_web3.eth.contract(
+                address=self.starkgate_bridge_address,
+                abi=self.starkgate_bridge_abi
+            )
+            
+            # Convert StarkNet address to uint256
+            starknet_address_uint = int(self.wallet_address, 16)
+            amount_wei = self.base_web3.to_wei(self.bridge_amount, 'ether')
+            
+            # Build transaction
+            deposit_tx = starkgate_contract.functions.deposit(
+                amount_wei,
+                starknet_address_uint
+            ).build_transaction({
+                'from': self.phantom_base_address,
+                'value': amount_wei,
+                'gas': 200000,
+                'gasPrice': self.base_web3.eth.gas_price,
+                'nonce': self.base_web3.eth.get_transaction_count(self.phantom_base_address),
+            })
+            
+            # Sign and send transaction
+            signed_tx = self.base_web3.eth.account.sign_transaction(deposit_tx, private_key)
+            tx_hash = self.base_web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+            
+            self.console.print(f"📡 Bridge transaction sent: {tx_hash.hex()}")
+            
+            # Wait for confirmation
+            tx_receipt = self.base_web3.eth.wait_for_transaction_receipt(tx_hash, timeout=300)
+            
+            if tx_receipt.status == 1:
+                self.console.print("✅ StarkGate bridge completed successfully!", style="bold green")
+                return {
+                    "success": True,
+                    "tx_hash": tx_hash.hex(),
+                    "block_number": tx_receipt.blockNumber,
+                    "gas_used": tx_receipt.gasUsed,
+                    "amount": self.bridge_amount
+                }
+            else:
+                raise Exception("Bridge transaction failed")
+                
+        except Exception as e:
+            logger.error(f"❌ StarkGate bridge failed: {e}")
+            return {"success": False, "error": str(e)}
     
     async def check_starknet_balance(self) -> Dict[str, Any]:
         """Check current StarkNet balance"""
@@ -204,6 +298,34 @@ class AtomicActivationEngine:
         except Exception as e:
             logger.error(f"❌ Password prompt failed: {e}")
             return False
+    
+    async def execute_full_bridge_and_activation(self) -> None:
+        """Execute complete bridge + activation sequence"""
+        
+        self.console.print("🚀 FULL BRIDGE + ACTIVATION SEQUENCE", style="bold green")
+        self.console.print("📍 Step 1: Check Phantom balance")
+        
+        # Check Phantom balance
+        phantom_balance = await self.check_phantom_balance()
+        self.console.print(f"💰 Phantom balance: {phantom_balance['balance']:.6f} ETH")
+        
+        if phantom_balance['balance'] < self.bridge_amount:
+            self.console.print(f"❌ Insufficient Phantom balance: {phantom_balance['balance']:.6f} ETH < {self.bridge_amount:.6f} ETH", style="bold red")
+            return
+        
+        self.console.print("📍 Step 2: Execute StarkGate bridge")
+        
+        # Execute bridge
+        bridge_result = await self.execute_starkgate_bridge()
+        
+        if not bridge_result.get("success"):
+            self.console.print(f"❌ Bridge failed: {bridge_result.get('error')}", style="bold red")
+            return
+        
+        self.console.print("📍 Step 3: Monitor bridge completion and auto-activate")
+        
+        # Start monitoring for balance increase
+        await self.auto_trigger_monitor()
     
     async def auto_trigger_monitor(self) -> None:
         """High-frequency poll for auto-trigger execution"""
@@ -646,13 +768,14 @@ This atomic execution follows the PhantomArbiter bundle submitter pattern:
         logger.info(f"📄 Atomic execution report saved: {report_file}")
 
 async def main():
-    """Main execution with auto-trigger capability"""
+    """Main execution with full bridge automation"""
     
     import argparse
     
     parser = argparse.ArgumentParser(description="Atomic Activation Engine")
     parser.add_argument("--dry-run", action="store_true", help="Simulation only")
     parser.add_argument("--simulate", action="store_true", help="Cost simulation only")
+    parser.add_argument("--full-bridge", action="store_true", help="Execute full bridge + activation sequence")
     args = parser.parse_args()
     
     console = Console()
@@ -666,8 +789,20 @@ async def main():
         # Create engine
         engine = AtomicActivationEngine()
         
-        # Check if this is auto-trigger mode (no flags)
-        if not args.dry_run and not args.simulate:
+        if args.full_bridge:
+            # Full bridge + activation mode
+            console.print("\n🚀 FULL BRIDGE + ACTIVATION MODE", style="bold green")
+            console.print("🌉 This will execute the complete Base→StarkNet bridge and auto-activate")
+            
+            # Prompt for master password
+            if not engine.prompt_master_password():
+                console.print("❌ Full bridge mode requires valid password", style="bold red")
+                return
+            
+            # Execute full sequence
+            await engine.execute_full_bridge_and_activation()
+            
+        elif not args.dry_run and not args.simulate:
             # Auto-trigger mode - prompt for password
             console.print("\n🚀 LIVE EXECUTION MODE - Auto-Trigger Protocol", style="bold green")
             console.print("🎯 The system will automatically execute when balance ≥ 0.018 ETH")
