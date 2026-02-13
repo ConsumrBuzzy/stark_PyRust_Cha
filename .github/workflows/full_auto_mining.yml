@@ -87,28 +87,11 @@ jobs:
       - name: Send Status Report
         if: always()
         env:
+          JOB_STATUS: ${{ job.status }}
+          GITHUB_WORKFLOW: ${{ github.workflow }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           echo "📊 Sending final status report..."
-          python -c "
-import asyncio
-import sys
-import os
-sys.path.insert(0, 'src')
-from src.foundation.reporting import ReportingSystem
-
-async def send_report():
-    reporting = ReportingSystem()
-    if reporting.is_enabled():
-        status = '\${{ job.status }}'
-        workflow = '\${{ github.workflow }}'
-        run_id = '\${{ github.run_id }}'
-        
-        await reporting.telegram.send_alert(
-            'GITHUB ACTIONS REPORT',
-            f'Workflow: {workflow}\nRun ID: {run_id}\nStatus: {status}\nTime: {asyncio.get_event_loop().time()}'
-        )
-
-asyncio.run(send_report())
-"
+          python scripts/send_status_report.py
