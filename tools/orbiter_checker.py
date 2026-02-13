@@ -5,9 +5,13 @@ Checks if the 0.006 ETH is stuck in the Orbiter bridge contract
 """
 
 import os
+import sys
 import asyncio
 from web3 import Web3
-from starknet_py.net.full_node_client import FullNodeClient
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from src.ops.ghost_monitor import check_ghost_balance, load_settings
 
 def load_env():
     env_path = ".env"
@@ -53,27 +57,16 @@ async def check_orbiter_status():
         print(f"❌ Base check failed: {e}")
     
     # Check StarkNet ghost address
-    ghost_address = "os.getenv("STARKNET_GHOST_ADDRESS")"
-    
+    settings = load_settings()
+    ghost_address = settings.ghost_address
+
     print(f"\n👻 StarkNet Ghost Address: {ghost_address}")
     try:
-        client = FullNodeClient(node_url=os.getenv("STARKNET_MAINNET_URL"))
-        
-        from starknet_py.hash.selector import get_selector_from_name
-        from starknet_py.net.client_models import Call
-        
-        eth_address = "int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)"
-        call = Call(
-            to_addr=int(eth_address, 16),
-            selector=get_selector_from_name("balanceOf"),
-            calldata=[int(ghost_address, 16)]
-        )
-        
-        result = await client.call_contract(call)
-        balance = result[0] / 10**18
-        
+        balance, rpc_used = await check_ghost_balance(settings=settings, use_rpc_rotation=True)
         print(f"💰 Ghost Balance: {balance:.6f} ETH")
-        
+        if rpc_used:
+            print(f"   (via {rpc_used})")
+
         if balance > 0:
             print(f"✅ FUNDS DETECTED! Ready for sweep")
         else:
