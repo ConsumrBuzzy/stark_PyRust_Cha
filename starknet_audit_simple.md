@@ -1,13 +1,13 @@
 # Starknet Audit Report
 
-**Timestamp**: 2026-02-13 02:06:58
+**Timestamp**: 2026-02-13 02:10:48
 
 ## Balance Check
 
 | Address | Label | ETH Balance | Status |
 |---------|-------|-------------|--------|
-| 0xfF01E0776369Ce51debb16DFb70F23c16d875463 | Ghost Address | 0.000000 | error: 403 Client Error: Forbidden for url: https://starknet-mainnet.public.blastapi.io/ |
-| 0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9 | Main Wallet | 0.000000 | error: 403 Client Error: Forbidden for url: https://starknet-mainnet.public.blastapi.io/ |
+| 0xfF01E0776369Ce51debb16DFb70F23c16d875463 | Ghost Address | 0.000000 | all_rpcs_failed |
+| 0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9 | Main Wallet | 0.000000 | all_rpcs_failed |
 
 ## Deployment Status
 
