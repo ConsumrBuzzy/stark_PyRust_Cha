@@ -1,118 +1,65 @@
 """
 Unlock Derivation - Salt Discovery Protocol
-=========================================
-Finds the exact Salt/Class Hash combination for Argent Web Wallet
+Uses core AddressSearchEngine to find class hash/salt combos.
 """
 
 import os
-from starknet_py.hash.address import compute_address
-from starknet_py.net.signer.key_pair import KeyPair
+import sys
+from pathlib import Path
 
-def load_env():
-    env_path = ".env"
-    if not os.path.exists(env_path): return
-    with open(env_path, "r", encoding="utf-8") as f:
-        for line in f:
-            if "=" in line and not line.startswith("#"):
-                k, v = line.strip().split("=", 1)
-                os.environ[k.strip()] = v.strip()
+# Add src to path
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-load_env()
+try:
+    from foundation.legacy_env import load_env_manual
+    from engines.search import AddressSearchEngine
+except Exception as e:
+    print(f"❌ Failed to import core modules: {e}")
+    raise
+
 
 def find_my_recipe():
     """Find the exact parameters that generate the target address"""
-    
-    target = os.getenv("STARKNET_WALLET_ADDRESS")
-    
-    private_key_str = os.getenv("STARKNET_PRIVATE_KEY")
-    if not private_key_str:
-        print("❌ Missing STARKNET_PRIVATE_KEY")
-        return None
-        
-    pk = int(private_key_str, 16)
-    pub = KeyPair.from_private_key(pk).public_key
-    
-    print(f"🔍 Target Address: {hex(target)}")
-    print(f"🔑 Public Key: {hex(pub)}")
-    print(f"🧪 Starting derivation search...")
-    
-    # Top 5 Argent Web Class Hashes (expanded list)
-    hashes = [
-        # Standard Argent Web Wallet
-        0x01a7366993b74e484c2fa434313f89832207b53f609e25d26a27a26a27a26a27,
-        # ArgentX v0.4 (Cairo 1)
-        0x036078334509b514626504edc9fb252328d1a240e4e948bef8d0c08dff45927f,
-        # Latest Cairo 1.0 Argent
-        0x029927c8af6bccf3f639a0259e64e99a5a8c711a35c1a35c1a35c1a35c1a35c1,
-        # Alternative Web variants
-        0x041d788f01c2b6f914b5fd7e07b5e4b0e9e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5,
-        0x03331bb0b7b955dfb643775cf5ead54378770cd0b58851eb065b5453c4f15089,
-        # Additional variants
-        0x0539f522860b093c83664d4c5709968853f3e828d57d740f941f1738722a4501,
-        0x025ec026985a3bf9d0cc53fe6a9428574c4915ebf8a8e0a9b9b9b9b9b9b9b9b9b,
-        0x071707e7c4f2b8c1e7d6e5f4e3d2c1b0a9f8e7d6c5b4a392817261514131211,
-    ]
-    
-    print(f"📋 Testing {len(hashes)} class hashes × 100 salts = {len(hashes) * 100} combinations")
-    
-    for i, h in enumerate(hashes):
-        print(f"\n🔍 Class Hash {i+1}/{len(hashes)}: {hex(h)}")
-        
-        for salt in range(0, 100):  # Testing salts 0-99
-            try:
-                # Try different constructor patterns
-                patterns = [
-                    [pub, 0],  # Owner + Guardian(0) - most common
-                    [pub],     # Owner only
-                    [pub, 1],  # Owner + Guardian(1)
-                    [pub, target],  # Owner + Self as Guardian
-                ]
-                
-                for j, calldata in enumerate(patterns):
-                    try:
-                        addr = compute_address(
-                            class_hash=h, 
-                            constructor_calldata=calldata, 
-                            salt=salt,
-                            deployer_address=0
-                        )
-                        
-                        if addr == target:
-                            print(f"\n🎉 **MATCH FOUND!** 🎉")
-                            print(f"Class Hash: {hex(h)}")
-                            print(f"Salt: {salt}")
-                            print(f"Constructor: {calldata}")
-                            print(f"Computed: {hex(addr)}")
-                            print(f"Target: {hex(target)}")
-                            
-                            return {
-                                "class_hash": h,
-                                "salt": salt,
-                                "constructor_calldata": calldata,
-                                "pattern_index": j
-                            }
-                            
-                    except Exception as e:
-                        # Skip invalid combinations
-                        continue
-                        
-            except Exception as e:
-                # Skip problematic salts
-                continue
-    
-    print(f"\n❌ No match found in {len(hashes) * 100} combinations")
-    print("⚠️ This account may use a custom class hash outside our list")
-    return None
+    load_env_manual()
+    engine = AddressSearchEngine()
 
-if __name__ == "__main__":
-    result = find_my_recipe()
-    
-    if result:
-        print(f"\n✅ SUCCESS! Ready for deployment with found parameters:")
-        print(f"   Class Hash: {hex(result['class_hash'])}")
-        print(f"   Salt: {result['salt']}")
-        print(f"   Constructor: {result['constructor_calldata']}")
+    hashes = [
+        0x01A7366993B74E484C2FA434313F89832207B53F609E25D26A27A26A27A26A27,
+        0x036078334509B514626504EDC9FB252328D1A240E4E948BEF8D0C08DFF45927F,
+        0x029927C8AF6BCCF3F639A0259E64E99A5A8C711A35C1A35C1A35C1A35C1A35C1,
+        0x041D788F01C2B6F914B5FD7E07B5E4B0E9E5E5E5E5E5E5E5E5E5E5E5E5E5E5E5E5,
+        0x03331BB0B7B955DFB643775CF5EAD54378770CD0B58851EB065B5453C4F15089,
+        0x0539F522860B093C83664D4C5709968853F3E828D57D740F941F1738722A4501,
+        0x025EC026985A3BF9D0CC53FE6A9428574C4915EBF8A8E0A9B9B9B9B9B9B9B9B9B,
+        0x071707E7C4F2B8C1E7D6E5F4E3D2C1B0A9F8E7D6C5B4A392817261514131211,
+    ]
+
+    constructor_patterns = [[None, 0], [None], [None, 1], [None, None]]
+
+    result = engine.expanded_search(
+        hashes=hashes,
+        salt_range=100,
+        constructor_patterns=constructor_patterns,
+    )
+
+    if result.get("success"):
+        print(f"\n🎉 **MATCH FOUND!** 🎉")
+        print(f"Class Hash: {result['hash']}")
+        print(f"Salt: {result['salt']}")
+        print(f"Constructor: {result['calldata']}")
+        print(f"Target: {result['target']}")
         print(f"\n🚀 Next: Use these parameters in argent_emergency_exit.py")
     else:
         print(f"\n❌ FAILED - No derivation match found")
         print(f"💡 Consider: portfolio.argent.xyz for manual recovery")
+
+    return result
+
+
+if __name__ == "__main__":
+    result = find_my_recipe()
+    if result.get("success"):
+        print(f"\n✅ SUCCESS! Ready for deployment with found parameters!")
+    else:
+        print(f"\n⚠️ May need custom class hash or salt")
