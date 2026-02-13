@@ -10,4 +10,5 @@ __all__ = [
     "reporting_ops",
     "clawback",
     "ga_checks",
+    "ghost_monitor",
 ]
