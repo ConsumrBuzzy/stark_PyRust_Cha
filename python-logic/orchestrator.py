@@ -27,17 +27,29 @@ try:
 except ImportError:
     RUST_AVAILABLE = False
 
+# Prefer core UI and strategy
+CoreDashboard = None
 try:
-    from strategy_module import RefiningStrategy
-    from dashboard import Dashboard
-except ImportError:
-    RefiningStrategy = None
-    Dashboard = None
+    from core.ui.dashboard import Dashboard as CoreDashboard
+except Exception:
+    CoreDashboard = None
 
+LegacyDashboard = None
+try:
+    from dashboard import Dashboard as LegacyDashboard
+except Exception:
+    LegacyDashboard = None
+
+CoreRefiningStrategy = None
+LegacyRefiningStrategy = None
 try:
     from engines.influence import RefiningStrategy as CoreRefiningStrategy
 except Exception:
     CoreRefiningStrategy = None
+try:
+    from strategy_module import RefiningStrategy as LegacyRefiningStrategy
+except Exception:
+    LegacyRefiningStrategy = None
 
 load_env_manual()
 
@@ -79,14 +91,18 @@ def start(strategy: str = "refine", dry_run: bool = True):
         console.print("[bold red]Rust extension missing.[/bold red]")
         return
     
-    # Initialize Dashboard
-    dash = Dashboard()
+    # Initialize Dashboard (prefer core, fallback to legacy)
+    dash_cls = CoreDashboard or LegacyDashboard
+    if dash_cls is None:
+        console.print("[red]Dashboard module unavailable.[/red]")
+        return
+    dash = dash_cls()
 
     # Initialize Strategy
     active_strategy = None
     if strategy == "refine":
         # Prefer core strategy; fallback to legacy
-        strategy_cls = CoreRefiningStrategy or RefiningStrategy
+        strategy_cls = CoreRefiningStrategy or LegacyRefiningStrategy
         active_strategy = strategy_cls(dry_run=dry_run)
         
         # Monkey-patch strategy logging to feed Dashboard
