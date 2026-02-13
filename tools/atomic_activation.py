@@ -233,8 +233,19 @@ class AtomicActivationEngine:
         
         try:
             # Use Alchemy provider exclusively for reliability
-            provider_name = "Alchemy"
-            client = self.provider_factory.providers["Alchemy"].client
+            provider_name, client = self.provider_factory.get_best_provider()
+            
+            # Force use Alchemy if available
+            if "Alchemy" in self.provider_factory.providers:
+                # Get Alchemy client using the factory method
+                providers = self.provider_factory.providers
+                for name, config in providers.items():
+                    if name == "Alchemy":
+                        # Create client directly from config
+                        from starknet_py.net.full_node_client import FullNodeClient
+                        client = FullNodeClient(node_url=config.rpc_url)
+                        provider_name = name
+                        break
             
             # Check balance using call_contract
             from starknet_py.hash.selector import get_selector_from_name
