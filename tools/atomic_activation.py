@@ -243,7 +243,7 @@ class AtomicActivationEngine:
                     if name == "Alchemy":
                         # Create client directly from config
                         from starknet_py.net.full_node_client import FullNodeClient
-                        client = FullNodeClient(node_url=config.rpc_url)
+                        client = FullNodeClient(node_url=config.url)
                         provider_name = name
                         break
             
