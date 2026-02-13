@@ -11,4 +11,5 @@ __all__ = [
     "clawback",
     "ga_checks",
     "ghost_monitor",
+    "rpc_router",
 ]
