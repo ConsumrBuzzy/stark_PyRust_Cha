@@ -1,6 +1,6 @@
 # stark_PyRust_Chain
 
-Refactored core with Python 3.12 + Rust (PyO3) engines. Legacy `python-logic/` scripts are now thin wrappers or deprecated stubs. Use the core engines and UI for all functionality.
+Public/portfolio-ready refactor with Python 3.12 + Rust (PyO3) engines. Legacy `python-logic/` scripts are thin wrappers or deprecated stubs; core modules are the source of truth.
 
 ## Structure
 - `src/engines/`
@@ -27,10 +27,16 @@ Refactored core with Python 3.12 + Rust (PyO3) engines. Legacy `python-logic/` s
 - Onramp/refuel: `onramp.py` → `CoinbaseOnrampEngine`; `gas_refuel.py` → `GasRefuelEngine`.
 - Chasers: `chaser.py` → `OrbiterBridgeAdapter`; `inflow_chaser.py` → `CdpChaserEngine`.
 
+## Security & hygiene
+- No secrets in repo; configure via `.env` (untracked). Use `foundation.legacy_env.load_env_manual` for consistent loading.
+- Keys are resolved through `SecurityManager`; avoid direct env access in new code.
+- Logs/artifacts are ignored via `.gitignore`; keep large files out of git.
+
 ## Usage notes
 - Configure environment via `.env` (use `foundation.legacy_env.load_env_manual`).
 - Sensitive keys are resolved via `SecurityManager`; avoid direct env access in new code.
 - Engines support dry-run where applicable; check script flags (`--confirm`, `--no-dry-run`).
+- Public/portfolio positioning: core code demonstrates Rust-Python integration, StarkNet tooling, rich TUI, and layered architecture; legacy scripts remain only as wrappers/stubs.
 
 ## Deprecations
 - `python-logic/dashboard.py`: use `src/core/ui/dashboard.py`.
@@ -41,3 +47,4 @@ Refactored core with Python 3.12 + Rust (PyO3) engines. Legacy `python-logic/` s
 - Preferred layout: core logic in `src/`, wrappers in `python-logic/`.
 - Add tests under `tests/` (not yet present) and run linting/formatting before commits.
 - Keep large artifacts/logs out of git; see `.gitignore`.
+- For portfolio clarity: legacy helpers are marked deprecated; core modules reflect current best practices.
