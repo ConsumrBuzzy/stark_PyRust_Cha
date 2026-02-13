@@ -7,17 +7,34 @@ recommendations used by CLI scripts and automation.
 from __future__ import annotations
 
 import asyncio
+import os
 from decimal import Decimal
 from typing import Dict, Tuple
 
 from src.foundation.network import NetworkOracle
 from src.ops.env import OpsConfig, build_config
+from src.ops.rpc_router import select_starknet_client
 
 
 async def ensure_oracle(oracle: NetworkOracle | None = None) -> NetworkOracle:
     """Initialize and return a NetworkOracle (idempotent for callers)."""
 
     if oracle is None:
+        # Smart RPC selection
+        rpc_candidates = [
+            os.getenv("STARKNET_MAINNET_URL"),
+            os.getenv("STARKNET_RPC_URL"),
+            os.getenv("STARKNET_LAVA_URL"),
+            os.getenv("STARKNET_1RPC_URL"),
+            os.getenv("STARKNET_ONFINALITY_URL"),
+            "https://starknet-mainnet.public.blastapi.io",
+            "https://1rpc.io/starknet",
+            "https://starknet.api.onfinality.io/public",
+        ]
+        client, selected = await select_starknet_client(rpc_candidates)
+        if selected:
+            # NetworkOracle reads env; set to selected
+            os.environ["STARKNET_RPC_URL"] = selected
         oracle = NetworkOracle()
     await oracle.initialize()
     return oracle
