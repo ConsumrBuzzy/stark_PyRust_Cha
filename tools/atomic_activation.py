@@ -409,15 +409,19 @@ class AtomicActivationEngine:
                     # Stop monitoring
                     self.auto_trigger_enabled = False
                     break
+                else:
+                    needed = self.activation_threshold - current_balance
+                    self.console.print(f"⏳ Need {needed:.6f} more ETH")
                 
-                await asyncio.sleep(10)  # 10-second poll
+                # Wait for next poll
+                await asyncio.sleep(poll_interval)
                 
             except KeyboardInterrupt:
                 self.console.print("\n🛑 Auto-trigger monitor stopped by user")
                 break
             except Exception as e:
                 logger.error(f"❌ Monitor error: {e}")
-                await asyncio.sleep(10)
+                await asyncio.sleep(poll_interval)
     
     async def log_recovery_success(self, result: ExecutionResult) -> None:
         """Log successful recovery to docs/RECOVERY_COMPLETE.md"""
