@@ -266,7 +266,7 @@ class EcosystemMonitor:
         
         for asset in summary.assets:
             report_lines.append(
-                f"| {asset.chain} | {asset.asset} | {asset.balance:.4f} | "
+                f"| {asset.chain} | {asset.asset.value} | {asset.balance:.4f} | "
                 f"${asset.usd_value:,.2f} | {asset.status.value} |"
             )
         
