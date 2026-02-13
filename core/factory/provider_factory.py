@@ -119,8 +119,7 @@ class ProviderFactory:
                 # Initialize client
                 try:
                     self.clients[config.name] = FullNodeClient(
-                        node_url=config.url,
-                        timeout=config.timeout
+                        node_url=config.url
                     )
                     logger.debug(f"✅ Initialized {config.name} client")
                 except Exception as e:

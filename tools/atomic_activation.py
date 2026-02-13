@@ -25,7 +25,6 @@ from starknet_py.net.full_node_client import FullNodeClient
 from starknet_py.net.signer.key_pair import KeyPair
 from starknet_py.hash.selector import get_selector_from_name
 from starknet_py.net.client_models import Call
-from starknet_py.net.models.typed_data import TypedData
 
 # Import factory
 from core.factory import get_provider_factory
