@@ -123,6 +123,15 @@ class RecoveryKernel:
             # Initialize atomic bundle
             self.atomic_bundle = AtomicBundle(self.activation_system)
             
+            # Initialize genesis and evolution systems
+            self.genesis_bundle = GenesisBundle(self.activation_system)
+            self.evolution_loop = EvolutionLoop(
+                self.network_oracle, 
+                self.security_manager, 
+                self.state_registry, 
+                self.activation_system
+            )
+            
             # Initialize UI if available
             self.enhanced_monitoring.initialize_ui()
             
