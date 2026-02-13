@@ -229,11 +229,12 @@ class AtomicActivationEngine:
             return {"success": False, "error": str(e)}
     
     async def check_starknet_balance(self) -> Dict[str, Any]:
-        """Check current StarkNet balance"""
+        """Check current StarkNet balance using Alchemy exclusively"""
         
         try:
-            # Get best provider
-            provider_name, client = self.provider_factory.get_best_provider()
+            # Use Alchemy provider exclusively for reliability
+            provider_name = "Alchemy"
+            client = self.provider_factory.providers["Alchemy"].client
             
             # Check balance using call_contract
             from starknet_py.hash.selector import get_selector_from_name
@@ -257,10 +258,14 @@ class AtomicActivationEngine:
             }
             
         except Exception as e:
-            logger.warning(f"⚠️ Balance check failed: {e}")
-            # Return current known balance as fallback
-            logger.info("💰 Using fallback balance: 0.009157 ETH")
-            return {"balance": 0.009157, "error": str(e), "provider": "fallback"}
+            logger.error(f"❌ Balance check failed via Alchemy: {e}")
+            # NO FALLBACK - Return error status instead of fake balance
+            return {
+                "balance": None, 
+                "error": str(e), 
+                "provider": "none",
+                "status": "PENDING"
+            }
     
     def prompt_master_password(self) -> bool:
         """Prompt for master signer password"""
