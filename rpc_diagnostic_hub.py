@@ -363,6 +363,160 @@ class NetworkSentinel:
                 border_style="yellow"
             ))
     
+    def analyze_main_wallet_status(self):
+        """Deep analysis of main wallet deployment status"""
+        
+        main_wallet = "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9"
+        
+        self.console.print(Panel(
+            f"[bold blue]🔍 MAIN WALLET DEEP ANALYSIS[/bold blue]\n"
+            f"Address: {main_wallet}\n"
+            f"Analyzing deployment status across providers...",
+            title="Protocol-Level Verification"
+        ))
+        
+        # Check getClassHashAt results across providers
+        deployment_status = {}
+        nonce_status = {}
+        
+        for result in self.results:
+            if hasattr(result, 'advanced_methods'):
+                methods = result.advanced_methods
+                
+                # Parse getClassHashAt result
+                class_hash_result = methods.get("getClassHashAt", "")
+                if "⚪ EMPTY" in class_hash_result:
+                    deployment_status[result.name] = "❌ NOT DEPLOYED"
+                elif "✅" in class_hash_result:
+                    deployment_status[result.name] = "✅ DEPLOYED"
+                else:
+                    deployment_status[result.name] = "⚠️ UNKNOWN"
+                
+                # Parse getNonce result
+                nonce_result = methods.get("getNonce", "")
+                if "⚪ 0x0" in nonce_result:
+                    nonce_status[result.name] = "⚪ ZERO_NONCE"
+                elif "✅" in nonce_result:
+                    nonce_status[result.name] = f"✅ NONCE_{nonce_result.split()[-1]}"
+                else:
+                    nonce_status[result.name] = "⚠️ ERROR"
+        
+        # Display deployment status table
+        deploy_table = Table(title="Main Wallet Deployment Status")
+        deploy_table.add_column("Provider", style="cyan")
+        deploy_table.add_column("getClassHashAt", justify="center")
+        deploy_table.add_column("getNonce", justify="center")
+        deploy_table.add_column("Status", style="bold")
+        
+        consensus_deployed = 0
+        consensus_undeployed = 0
+        
+        for result in self.results:
+            if result.name in deployment_status:
+                deploy_status = deployment_status[result.name]
+                nonce_stat = nonce_status.get(result.name, "⚠️ ERROR")
+                
+                if "✅ DEPLOYED" in deploy_status:
+                    consensus_deployed += 1
+                elif "❌ NOT DEPLOYED" in deploy_status:
+                    consensus_undeployed += 1
+                
+                deploy_table.add_row(
+                    result.name,
+                    deploy_status,
+                    nonce_stat,
+                    deploy_status
+                )
+        
+        self.console.print(deploy_table)
+        
+        # Consensus analysis
+        total_votes = consensus_deployed + consensus_undeployed
+        if total_votes > 0:
+            deployed_percentage = (consensus_deployed / total_votes) * 100
+            
+            if deployed_percentage >= 75:
+                consensus = "✅ CONSENSUS: DEPLOYED"
+                border_style = "green"
+                implication = "Account is deployed and ready for transactions"
+            elif deployed_percentage <= 25:
+                consensus = "❌ CONSENSUS: NOT DEPLOYED"
+                border_style = "red"
+                implication = "Account requires deployment before transactions"
+            else:
+                consensus = "⚠️ CONSENSUS: MIXED SIGNALS"
+                border_style = "yellow"
+                implication = "Network state inconsistent - may be syncing"
+        else:
+            consensus = "❓ NO CONSENSUS"
+            border_style = "dim"
+            implication = "Unable to determine deployment status"
+        
+        self.console.print(Panel(
+            f"[bold]{consensus}[/bold]\n\n"
+            f"Deployed Votes: {consensus_deployed}/{total_votes}\n"
+            f"Undeployed Votes: {consensus_undeployed}/{total_votes}\n\n"
+            f"Implication: {implication}",
+            title="Deployment Consensus Analysis",
+            border_style=border_style
+        ))
+        
+        # Log results to audit report
+        self.update_audit_report(deployment_status, nonce_status, consensus)
+    
+    def update_audit_report(self, deployment_status: Dict, nonce_status: Dict, consensus: str):
+        """Update audit report with deep diagnostic results"""
+        
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        report_content = f"""# StarkNet Deep Diagnostic Report
+
+**Timestamp**: {timestamp}
+**Method**: Advanced RPC Method Surface Mapping
+**Target**: Main Wallet Deployment Analysis
+
+## Method Support Matrix
+
+| Provider | getClassHashAt | getNonce | Chain Status |
+|----------|---------------|----------|--------------|
+"""
+        
+        for result in self.results:
+            if result.name in deployment_status:
+                report += f"| {result.name} | {deployment_status[result.name]} | {nonce_status.get(result.name, '⚠️ ERROR')} | {'✅ ONLINE' if '✅' in result.status else '❌ OFFLINE'} |\n"
+        
+        report += f"""
+
+## Deployment Consensus Analysis
+
+**Result**: {consensus}
+
+**Implications**:
+- If NOT DEPLOYED: Account initialization required before any transactions
+- If DEPLOYED: Ready for transaction execution and fund sweeps
+- If MIXED: Network may be syncing or experiencing inconsistencies
+
+## Strategic Recommendations
+
+- **Force Deployment**: Consider using starkli deploy if consensus shows NOT DEPLOYED
+- **Fund Recovery**: Ghost funds can only be swept to a deployed account
+- **Network Health**: Monitor for consensus changes over time
+
+## Technical Notes
+
+- `getClassHashAt` returns 0x0 for undeployed accounts
+- `getNonce` returns 0x0 for accounts without transaction history
+- Consensus across multiple providers provides ground truth
+
+---
+*Generated by rpc_diagnostic_hub.py - Deep Diagnostics*
+"""
+        
+        with open("starknet_deep_diagnostic_report.md", "w", encoding="utf-8") as f:
+            f.write(report_content)
+        
+        self.console.print(f"\n📄 Deep diagnostic report saved to: starknet_deep_diagnostic_report.md")
+    
     def get_signup_urls(self):
         """Provide signup URLs for missing premium providers"""
         urls = {
