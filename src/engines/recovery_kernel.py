@@ -367,6 +367,48 @@ class RecoveryKernel:
         if self.security_manager:
             self.security_manager.print_security_status()
     
+    # Legacy functionality methods
+    async def start_stargate_watch(self) -> Dict[str, Any]:
+        """Start StarkGate watch mode (from starkgate_watch.py)"""
+        if not self.enhanced_monitoring:
+            return {"success": False, "error": "Enhanced monitoring not initialized"}
+        
+        return await self.enhanced_monitoring.start_stargate_watch(self.starknet_address)
+    
+    async def start_ghost_sentry(self, ghost_address: str, main_wallet: str) -> Dict[str, Any]:
+        """Start Ghost Sentry mode (from sentry.py)"""
+        if not self.enhanced_monitoring:
+            return {"success": False, "error": "Enhanced monitoring not initialized"}
+        
+        return await self.enhanced_monitoring.start_ghost_sentry(ghost_address, main_wallet)
+    
+    async def start_bridge_recovery(self, bridge_tx_hash: str) -> Dict[str, Any]:
+        """Start Bridge Recovery mode (from bridge_recovery.py)"""
+        if not self.enhanced_monitoring:
+            return {"success": False, "error": "Enhanced monitoring not initialized"}
+        
+        return await self.enhanced_monitoring.start_bridge_recovery(bridge_tx_hash)
+    
+    async def start_advanced_tracking(self, tx_hash: str) -> Dict[str, Any]:
+        """Start Advanced Tracking mode (from advanced_tracker.py)"""
+        if not self.enhanced_monitoring:
+            return {"success": False, "error": "Enhanced monitoring not initialized"}
+        
+        return await self.enhanced_monitoring.start_advanced_tracking(tx_hash)
+    
+    def create_atomic_bundle(self) -> AtomicBundle:
+        """Create atomic bundle (from atomic_activation.py)"""
+        return AtomicBundle(self.activation_system)
+    
+    def stop_all_monitoring(self) -> None:
+        """Stop all monitoring modes"""
+        if self.enhanced_monitoring:
+            self.enhanced_monitoring.stop_monitoring()
+    
+    def get_available_modes(self) -> List[str]:
+        """Get list of available monitoring modes"""
+        return [mode.value for mode in MonitoringMode]
+    
     async def shutdown(self) -> None:
         """Shutdown the Recovery Kernel"""
         print("🛑 Shutting down Recovery Kernel...")

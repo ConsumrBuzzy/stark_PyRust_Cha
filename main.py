@@ -23,6 +23,15 @@ async def main():
     parser.add_argument("--status", action="store_true", help="Check recovery status")
     parser.add_argument("--resume", action="store_true", help="Resume previous recovery mission")
     
+    # Legacy functionality modes
+    parser.add_argument("--stargate-watch", action="store_true", help="Start StarkGate watch mode")
+    parser.add_argument("--ghost-sentry", action="store_true", help="Start Ghost Sentry mode")
+    parser.add_argument("--bridge-recovery", type=str, help="Start Bridge Recovery mode with TX hash")
+    parser.add_argument("--advanced-tracking", type=str, help="Start Advanced Tracking mode with TX hash")
+    parser.add_argument("--ghost-address", type=str, help="Ghost address for Ghost Sentry mode")
+    parser.add_argument("--main-wallet", type=str, help="Main wallet address for Ghost Sentry mode")
+    parser.add_argument("--list-modes", action="store_true", help="List available monitoring modes")
+    
     args = parser.parse_args()
     
     if args.recover:
