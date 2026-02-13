@@ -12,6 +12,8 @@ from starknet_py.net.client_models import Call
 from starknet_py.hash.selector import get_selector_from_name
 from starknet_py.net.full_node_client import FullNodeClient
 
+from src.ops.rpc_router import select_starknet_client
+
 from src.ops.env import build_config, load_dotenv
 from src.ops.network_checks import ensure_oracle
 
@@ -87,13 +89,11 @@ async def balance_with_rotation(
     rpc_urls: Iterable[str],
     eth_contract: int,
 ) -> Tuple[Optional[Decimal], Optional[str]]:
-    for url in rpc_urls:
-        try:
-            bal = await balance_via_rpc(address, url, eth_contract)
-            return bal, url
-        except Exception:
-            continue
-    return None, None
+    client, selected = await select_starknet_client(rpc_urls)
+    if client is None:
+        return None, None
+    bal = await balance_via_rpc(address, selected, eth_contract)
+    return bal, selected
 
 
 async def check_ghost_balance(

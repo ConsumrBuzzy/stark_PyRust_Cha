@@ -13,6 +13,8 @@ from starknet_py.net.full_node_client import FullNodeClient
 from starknet_py.net.signer.key_pair import KeyPair
 from starknet_py.net.models import StarknetChainId
 
+from src.ops.rpc_router import select_starknet_client
+
 
 class AccountActivator:
     """Activates undeployed StarkNet accounts."""
@@ -24,8 +26,17 @@ class AccountActivator:
         # Account configuration
         self.wallet_address = os.getenv("STARKNET_WALLET_ADDRESS")
         self.private_key = os.getenv("STARKNET_PRIVATE_KEY")
-        self.rpc_url = os.getenv("STARKNET_MAINNET_URL")  # Alchemy
-
+        self.rpc_candidates = [
+            os.getenv("STARKNET_MAINNET_URL"),
+            os.getenv("STARKNET_RPC_URL"),
+            os.getenv("STARKNET_LAVA_URL"),
+            os.getenv("STARKNET_1RPC_URL"),
+            os.getenv("STARKNET_ONFINALITY_URL"),
+            "https://starknet-mainnet.public.blastapi.io",
+            "https://1rpc.io/starknet",
+            "https://starknet.api.onfinality.io/public",
+        ]
+        
         # Argent proxy class hash (standard for most accounts)
         self.argent_proxy_hash = int(
             os.getenv(
@@ -35,7 +46,7 @@ class AccountActivator:
             16,
         )
 
-        if not all([self.wallet_address, self.private_key, self.rpc_url]):
+        if not all([self.wallet_address, self.private_key]):
             raise ValueError("Missing required environment variables")
 
     def load_env(self):
@@ -53,7 +64,9 @@ class AccountActivator:
         self.console.print("🚀 Account Activation - Self-Funded Proxy Deploy", style="bold blue")
 
         try:
-            client = FullNodeClient(node_url=self.rpc_url)
+            client, selected_rpc = await select_starknet_client(self.rpc_candidates)
+            if client is None:
+                raise RuntimeError("No healthy StarkNet RPC available for activation")
 
             # Create key pair
             private_key_int = int(self.private_key, 16)
@@ -64,7 +77,7 @@ class AccountActivator:
 
             self.console.print(f"📍 Target Address: {self.wallet_address}")
             self.console.print(f"🔑 Key Pair: {key_pair.public_key:064x}")
-            self.console.print(f"📡 RPC: {self.rpc_url[:50]}...")
+            self.console.print(f"📡 RPC: {selected_rpc[:50]}...")
 
             if dry_run:
                 self.console.print("🔍 DRY RUN MODE - Connectivity Check Only")
