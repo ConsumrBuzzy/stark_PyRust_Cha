@@ -8,54 +8,46 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.foundation.network import NetworkOracle
+from src.ops.env import build_config
+from src.ops.network_checks import phantom_sweep_recommendation
 
 async def phantom_sweep():
-    oracle = NetworkOracle()
-    await oracle.initialize()
-    
-    phantom_address = '0xbd5fdCDc18FA0B0764861996CC9482f0526EEDd9'
-    starknet_address = '0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9'
-    
+    """Capital sweep recommendation using shared ops helpers."""
+
+    config = build_config()
+    result = await phantom_sweep_recommendation(config=config)
+
+    phantom_balance = result["phantom_balance"]
+    starknet_balance = result["starknet_balance"]
+    sweep_amount = result["sweep_amount"]
+    needed = result["needed"]
+
     print('💰 PHANTOM-SWEEP CAPITAL AUDIT')
     print('=' * 50)
-    
-    # Check Phantom balance
-    phantom_balance = await oracle.get_balance(phantom_address, 'base')
-    print(f'👻 Phantom Balance: {phantom_balance:.6f} ETH (${phantom_balance * 2200:.2f})')
-    
-    # Check StarkNet balance
-    starknet_balance = await oracle.get_balance(starknet_address, 'starknet')
-    print(f'🏭 StarkNet Balance: {starknet_balance:.6f} ETH (${starknet_balance * 2200:.2f})')
-    
-    # Calculate sweep amount
-    gas_reserve = 0.001
-    sweep_amount = max(0, float(phantom_balance) - gas_reserve)
-    
-    print(f'⛽ Gas Reserve: {gas_reserve:.6f} ETH')
-    print(f'🧹 Sweep Amount: {sweep_amount:.6f} ETH (${sweep_amount * 2200:.2f})')
-    
-    # Check if sweep is needed
-    if float(starknet_balance) < 0.018 and sweep_amount > 0:
-        print(f'🎯 SWEEP RECOMMENDED:')
+    print(f'👻 Phantom Balance: {phantom_balance:.6f} ETH (${float(phantom_balance) * 2200:.2f})')
+    print(f'🏭 StarkNet Balance: {starknet_balance:.6f} ETH (${float(starknet_balance) * 2200:.2f})')
+    print(f'⛽ Gas Reserve: {config.gas_reserve_eth:.6f} ETH')
+    print(f'🧹 Sweep Amount: {float(sweep_amount):.6f} ETH (${float(sweep_amount) * 2200:.2f})')
+
+    if result["sweep_recommended"]:
+        print('🎯 SWEEP RECOMMENDED:')
         print(f'   Current StarkNet: {starknet_balance:.6f} ETH')
-        print(f'   Target Threshold: 0.018 ETH')
-        print(f'   Needed: {0.018 - float(starknet_balance):.6f} ETH')
-        print(f'   Available: {sweep_amount:.6f} ETH')
-        
-        if sweep_amount >= (0.018 - float(starknet_balance)):
-            print(f'✅ SWEEP SUFFICIENT - Will reach threshold')
+        print(f'   Target Threshold: {config.threshold_eth:.3f} ETH')
+        print(f'   Needed: {needed:.6f} ETH')
+        print(f'   Available: {float(sweep_amount):.6f} ETH')
+
+        if result["sweep_sufficient"]:
+            print('✅ SWEEP SUFFICIENT - Will reach threshold')
         else:
-            print(f'⚠️ SWEEP INSUFFICIENT - Will still be short')
-        
+            print('⚠️ SWEEP INSUFFICIENT - Will still be short')
         return True
-    else:
-        print(f'❌ NO SWEEP NEEDED')
-        if float(starknet_balance) >= 0.018:
-            print(f'   StarkNet already above threshold')
-        elif sweep_amount <= 0:
-            print(f'   Insufficient Phantom funds for sweep')
-        return False
+
+    print('❌ NO SWEEP NEEDED')
+    if starknet_balance >= config.threshold_eth:
+        print('   StarkNet already above threshold')
+    elif sweep_amount <= 0:
+        print('   Insufficient Phantom funds for sweep')
+    return False
 
 if __name__ == "__main__":
     result = asyncio.run(phantom_sweep())

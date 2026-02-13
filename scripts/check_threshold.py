@@ -10,15 +10,18 @@ from pathlib import Path
 # Add src to path for both local and GitHub Actions
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.foundation.network import NetworkOracle
 import asyncio
 
+from src.ops.env import build_config
+from src.ops.network_checks import check_threshold as check_threshold_ops
+
 async def check_threshold():
-    oracle = NetworkOracle()
-    await oracle.initialize()
-    balance = await oracle.get_balance('0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9', 'starknet')
+    """Threshold check using shared ops helpers to preserve behavior."""
+
+    config = build_config()
+    ready, balance = await check_threshold_ops(config=config)
     print(f'balance={balance}')
-    if balance >= 0.018:
+    if ready:
         print('ready=true')
         print('ready_for_mining=true')
     else:
