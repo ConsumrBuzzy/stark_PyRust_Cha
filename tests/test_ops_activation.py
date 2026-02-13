@@ -85,6 +85,8 @@ from src.ops.activation import AccountActivator
 
 
 def test_activation_init():
+    # Prevent load_env from overriding test env
+    AccountActivator.load_env = lambda self: None  # type: ignore
     activator = AccountActivator()
     assert activator.wallet_address == "0x1"
     assert activator.rpc_url == "https://rpc"
