@@ -5,7 +5,10 @@ GitHub Actions helper script for threshold checking
 
 import sys
 import os
-sys.path.insert(0, 'src')
+from pathlib import Path
+
+# Add src to path for both local and GitHub Actions
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from src.foundation.network import NetworkOracle
 import asyncio
