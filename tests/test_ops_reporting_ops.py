@@ -1,7 +1,5 @@
 import asyncio
 
-import pytest
-
 from src.ops.reporting_ops import send_pulse
 
 
@@ -23,17 +21,15 @@ class DummyReporting:
         return self._enabled
 
 
-@pytest.mark.asyncio
-async def test_send_pulse_enabled():
+def test_send_pulse_enabled():
     reporting = DummyReporting(enabled=True)
-    ok = await send_pulse("TEST", "msg", reporting=reporting)
+    ok = asyncio.run(send_pulse("TEST", "msg", reporting=reporting))
     assert ok is True
     assert reporting.telegram.sent == [("TEST", "msg")]
 
 
-@pytest.mark.asyncio
-async def test_send_pulse_disabled():
+def test_send_pulse_disabled():
     reporting = DummyReporting(enabled=False)
-    ok = await send_pulse("TEST", "msg", reporting=reporting)
+    ok = asyncio.run(send_pulse("TEST", "msg", reporting=reporting))
     assert ok is False
     assert reporting.telegram.sent == []
