@@ -1,6 +1,21 @@
-typer
-rich
-maturin
-pydantic
-python-dotenv
-requests
+# Multi-chain Asset Inventory System Dependencies
+# Core data validation and configuration
+typer>=0.9.0
+rich>=13.7.0
+maturin>=1.5.0
+pydantic>=2.5.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+
+# Structured logging and async operations
+loguru>=0.7.2
+httpx>=0.25.2
+
+# Web3 interactions (replace with actual implementations)
+web3>=6.11.0          # For Base/EVM chains
+solana>=0.31.0        # For Solana interactions
+starknet-py>=0.20.0   # For Starknet interactions
+
+# Testing framework
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
