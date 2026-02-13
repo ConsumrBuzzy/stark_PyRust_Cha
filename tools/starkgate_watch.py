@@ -143,8 +143,8 @@ class StarkGateWatcher:
             to_block = "latest"
             
             events = bridge_contract.events.LogMessageToL2().get_logs(
-                fromBlock=from_block,
-                toBlock=to_block,
+                from_block=from_block,
+                to_block=to_block,
                 argument_filters={
                     "to": target_uint
                 }
