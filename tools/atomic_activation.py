@@ -219,9 +219,9 @@ class AtomicActivationEngine:
                 ]
             )
             
-            # Estimate fee
+            # Estimate fee using starknet-py v0.10.0 API
             fee_estimate = await client.estimate_fee(
-                call=transfer_call,
+                request=transfer_call,
                 block_number="latest"
             )
             
