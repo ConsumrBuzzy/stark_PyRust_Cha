@@ -24,11 +24,13 @@ from src.ops.env import build_config
 
 async def fuel_alert():
     config = build_config()
-    await send_fuel_alert(
+    sent = await send_fuel_alert(
         starknet_address=config.starknet_address,
         balance_display=os.getenv('READY_BALANCE', '0.018'),
         event_time=asyncio.get_event_loop().time(),
     )
+    if sent:
+        print('✅ Fuel alert sent to Telegram')
     
 if __name__ == "__main__":
     asyncio.run(fuel_alert())
