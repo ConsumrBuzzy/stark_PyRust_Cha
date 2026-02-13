@@ -291,24 +291,24 @@ class RecoveryKernel:
         """Handle activation executing phase"""
         print("⚛️ Executing account activation...")
         
-        # Get private key
-        private_key = await self.security_manager.get_starknet_private_key()
-        if not private_key:
-            print("❌ Failed to get StarkNet private key")
-            await self._transition_to(RecoveryPhase.MISSION_FAILED, "Private key unavailable")
+        # Check account status first
+        account_status = await self.activation_system.check_account_status(self.starknet_address)
+        
+        if account_status.get("success") and account_status.get("deployed"):
+            print("✅ Account already deployed")
+            await self._transition_to(RecoveryPhase.ACTIVATION_COMPLETE, "Account already exists")
             return
         
-        # Execute activation
-        activation_result = await self.network_oracle.activate_account(
-            self.starknet_address,
-            private_key
-        )
+        # Execute account deployment
+        activation_result = await self.activation_system.execute_account_deployment(self.starknet_address)
         
         if activation_result.get("success"):
             await self.state_registry.update_account_status(
                 AccountStatus.DEPLOYED, 
                 activation_result.get("tx_hash")
             )
+            
+            self.activation_system.print_activation_summary(activation_result)
             await self._transition_to(RecoveryPhase.ACTIVATION_COMPLETE, "Account activation successful")
         else:
             print(f"❌ Activation failed: {activation_result.get('error')}")
