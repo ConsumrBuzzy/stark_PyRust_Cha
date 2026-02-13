@@ -15,6 +15,8 @@ def test_build_config_defaults(monkeypatch):
 
 
 def test_build_config_overrides(monkeypatch):
+    # Prevent reading real .env so env overrides take effect
+    monkeypatch.setattr(env, "load_dotenv", lambda *args, **kwargs: None)
     monkeypatch.setenv("STARKNET_WALLET_ADDRESS", "0xabc")
     monkeypatch.setenv("PHANTOM_BASE_ADDRESS", "0xdef")
     monkeypatch.setenv("ACTIVATION_THRESHOLD", "0.123")
