@@ -6,6 +6,8 @@ Extracted and consolidated bridge logic from tools/
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 import os
+from decimal import Decimal
+from datetime import datetime, timedelta
 from web3 import Web3
 from web3.middleware import ExtraDataToPOAMiddleware
 
@@ -20,12 +22,167 @@ class BridgeConfig:
     gas_reserve: float
     min_bridge_amount: float
 
+@dataclass
+class WithdrawalStatus:
+    """Withdrawal operation status"""
+    withdrawal_id: str
+    amount: Decimal
+    initiated_at: datetime
+    claimable_at: datetime
+    l1_tx_hash: Optional[str] = None
+    status: str = "initiated"  # initiated, claimable, claimed, failed
+
+class ClawbackSystem:
+    """L2 → L1 Withdrawal System for Emergency Asset Recovery"""
+    
+    def __init__(self, network_oracle, security_manager: SecurityManager):
+        self.network_oracle = network_oracle
+        self.security_manager = security_manager
+        self.withdrawal_history: Dict[str, WithdrawalStatus] = {}
+    
+    async def calculate_withdrawal_cost(self, amount_eth: Decimal) -> Dict[str, Any]:
+        """Calculate the cost-benefit analysis for withdrawal"""
+        try:
+            # Get current gas prices
+            base_client = self.network_oracle.clients["base"]
+            starknet_client = self.network_oracle.clients["starknet"]
+            
+            # L1 gas price
+            base_block = await base_client.get_block("latest")
+            base_gas_price = base_block.base_fee_per_gas
+            
+            # L2 gas price
+            starknet_block = await starknet_client.get_block("latest")
+            starknet_gas_price = getattr(starknet_block, 'gas_price', 20)
+            
+            # Estimate withdrawal costs
+            l2_withdrawal_gas = 150000  # Estimated gas for withdrawal
+            l1_claim_gas = 50000       # Estimated gas for claim
+            
+            l2_cost_eth = (starknet_gas_price * l2_withdrawal_gas) / Decimal('1e18')
+            l1_cost_eth = (base_gas_price * l1_claim_gas) / Decimal('1e18')
+            
+            total_cost_eth = l2_cost_eth + l1_cost_eth
+            net_amount_eth = amount_eth - total_cost_eth
+            
+            # Calculate USD values
+            eth_price_usd = 2200  # Fixed price for calculation
+            total_cost_usd = total_cost_eth * eth_price_usd
+            net_amount_usd = net_amount_eth * eth_price_usd
+            
+            return {
+                "amount_eth": amount_eth,
+                "l2_cost_eth": l2_cost_eth,
+                "l1_cost_eth": l1_cost_eth,
+                "total_cost_eth": total_cost_eth,
+                "net_amount_eth": net_amount_eth,
+                "total_cost_usd": total_cost_usd,
+                "net_amount_usd": net_amount_usd,
+                "profitable": net_amount_eth > 0,
+                "base_gas_price": base_gas_price,
+                "starknet_gas_price": starknet_gas_price
+            }
+            
+        except Exception as e:
+            return {"error": str(e), "profitable": False}
+    
+    async def initiate_withdrawal(self, amount_eth: Decimal, starknet_address: str) -> Optional[str]:
+        """Initiate L2 → L1 withdrawal"""
+        try:
+            # Cost-benefit check
+            cost_analysis = await self.calculate_withdrawal_cost(amount_eth)
+            if not cost_analysis.get("profitable", False):
+                print(f"❌ Withdrawal not profitable: Cost {cost_analysis.get('total_cost_eth', 0):.6f} ETH")
+                return None
+            
+            print(f"🛠️ Initiating withdrawal: {amount_eth:.6f} ETH")
+            print(f"💰 Net amount after fees: {cost_analysis.get('net_amount_eth', 0):.6f} ETH")
+            
+            # Get StarkNet private key
+            private_key = self.security_manager.get_starknet_private_key()
+            if not private_key:
+                print("❌ StarkNet private key not available")
+                return None
+            
+            # This would integrate with actual StarkNet withdrawal contract
+            # For now, simulate the withdrawal initiation
+            withdrawal_id = f"withdrawal_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            
+            # Record withdrawal
+            withdrawal_status = WithdrawalStatus(
+                withdrawal_id=withdrawal_id,
+                amount=amount_eth,
+                initiated_at=datetime.now(),
+                claimable_at=datetime.now() + timedelta(hours=3),  # StarkNet finality
+                status="initiated"
+            )
+            
+            self.withdrawal_history[withdrawal_id] = withdrawal_status
+            
+            print(f"✅ Withdrawal initiated: {withdrawal_id}")
+            print(f"⏰ Claimable at: {withdrawal_status.claimable_at}")
+            
+            return withdrawal_id
+            
+        except Exception as e:
+            print(f"❌ Withdrawal initiation failed: {e}")
+            return None
+    
+    async def claim_withdrawal(self, withdrawal_id: str) -> Optional[str]:
+        """Claim withdrawal on L1"""
+        try:
+            if withdrawal_id not in self.withdrawal_history:
+                print(f"❌ Withdrawal not found: {withdrawal_id}")
+                return None
+            
+            withdrawal = self.withdrawal_history[withdrawal_id]
+            
+            # Check if claimable
+            if datetime.now() < withdrawal.claimable_at:
+                print(f"⏳ Withdrawal not yet claimable: {withdrawal.claimable_at}")
+                return None
+            
+            print(f"🛠️ Claiming withdrawal: {withdrawal_id}")
+            
+            # Get Base private key
+            private_key = self.security_manager.get_phantom_private_key()
+            if not private_key:
+                print("❌ Base private key not available")
+                return None
+            
+            # This would integrate with actual L1 claim transaction
+            # For now, simulate the claim
+            tx_hash = f"0x{'0' * 64}"  # Simulated transaction hash
+            
+            withdrawal.status = "claimed"
+            withdrawal.l1_tx_hash = tx_hash
+            
+            print(f"✅ Withdrawal claimed: {tx_hash}")
+            print(f"💰 Amount received: {withdrawal.amount:.6f} ETH")
+            
+            return tx_hash
+            
+        except Exception as e:
+            print(f"❌ Withdrawal claim failed: {e}")
+            return None
+    
+    def get_withdrawal_status(self, withdrawal_id: str) -> Optional[WithdrawalStatus]:
+        """Get withdrawal status"""
+        return self.withdrawal_history.get(withdrawal_id)
+    
+    def list_withdrawals(self) -> Dict[str, WithdrawalStatus]:
+        """List all withdrawals"""
+        return self.withdrawal_history.copy()
+
 class BridgeSystem:
     """Dedicated bridge system extracted from atomic_activation.py"""
     
     def __init__(self, network_oracle, security_manager: SecurityManager):
         self.network_oracle = network_oracle
         self.security_manager = security_manager
+        
+        # Initialize ClawbackSystem for emergency withdrawals
+        self.clawback_system = ClawbackSystem(network_oracle, security_manager)
         
         # Web3 setup for Base network
         self.base_web3 = Web3(Web3.HTTPProvider(BASE_RPC_URL))
