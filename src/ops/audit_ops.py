@@ -67,7 +67,11 @@ async def run_audit(
         os.getenv("STARKNET_LAVA_URL"),
         os.getenv("STARKNET_1RPC_URL"),
         os.getenv("STARKNET_ONFINALITY_URL"),
+        "https://starknet-mainnet.public.blastapi.io",
+        "https://1rpc.io/starknet",
+        "https://starknet.api.onfinality.io/public",
     ]
+
     rpc = next((u for u in rpc_candidates if u), None)
     eth = eth_contract or int(
         os.getenv(
@@ -80,7 +84,9 @@ async def run_audit(
     if not rpc:
         raise ValueError("No RPC URL configured")
 
-    client = _load_client(rpc)
+    client, selected_rpc = await select_starknet_client(rpc_candidates)
+    if client is None:
+        raise ValueError("No healthy StarkNet RPC available")
 
     ghost_bal, main_bal, deployment = await asyncio.gather(
         _get_eth_balance(client, ghost, eth),
