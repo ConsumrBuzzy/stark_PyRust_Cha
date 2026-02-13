@@ -12,27 +12,22 @@ from datetime import datetime
 from rich.console import Console
 from rich.panel import Panel
 
-# Add python-logic to path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+# Add repo root to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from rescue_funds import get_ghost_address, check_starknet_balance, sweep_funds
+from src.ops.ghost_monitor import load_settings, check_ghost_balance, sweep_recommended
+# Fallback to existing sweep function if present
+try:
+    from rescue_funds import sweep_funds  # type: ignore
+except Exception:  # pragma: no cover
+    sweep_funds = None
 
 console = Console()
 
-def load_env():
-    env_path = ".env"
-    if not os.path.exists(env_path): return
-    with open(env_path, "r", encoding="utf-8") as f:
-        for line in f:
-            if "=" in line and not line.startswith("#"):
-                k, v = line.strip().split("=", 1)
-                os.environ[k.strip()] = v.strip()
-
-load_env()
-
 async def ghost_sentry_loop():
     """Main sentry loop for Ghost address monitoring"""
-    
+
+    settings = load_settings()
     console.print(Panel.fit(
         "[bold red]🚨 GHOST SENTRY LOOP ACTIVATED[/bold red]\n"
         "Main Wallet Decommissioned\n"
@@ -40,20 +35,20 @@ async def ghost_sentry_loop():
         "Target: Coinbase Starknet",
         title="Clean Break Protocol"
     ))
-    
-    ghost_addr = get_ghost_address()
+
+    ghost_addr = settings.ghost_address
     if not ghost_addr:
         console.print("[red]❌ Cannot get Ghost address[/red]")
         return
-    
+
     console.print(f"👻 Monitoring: {ghost_addr}")
-    
+
     # Coinbase Starknet address (fallback to transit if not set)
-    coinbase_addr = os.getenv("COINBASE_STARKNET_ADDRESS") or "0xfF01E0776369Ce51debb16DFb70F23c16d875463"
-    
+    coinbase_addr = os.getenv("COINBASE_STARKNET_ADDRESS") or settings.main_address
+
     poll_interval = 300  # 5 minutes
-    threshold = 0.005   # 0.005 ETH minimum
-    
+    threshold = float(settings.ghost_threshold_eth)
+
     console.print(f"⏰ Poll Interval: {poll_interval}s")
     console.print(f"💰 Threshold: {threshold} ETH")
     console.print(f"🎯 Target: {coinbase_addr}")
@@ -68,35 +63,30 @@ async def ghost_sentry_loop():
         console.print(f"\n[dim]{timestamp} - Poll {poll_count}/{max_polls}[/dim]")
         
         try:
-            balance = await check_starknet_balance(ghost_addr)
+            balance, rpc_used = await check_ghost_balance(use_rpc_rotation=True, settings=settings)
             
             if balance > threshold:
                 console.print(f"[bold green]💰 FUNDS DETECTED: {balance:.6f} ETH[/bold green]")
                 console.print(f"[bold yellow]🚀 INITIATING AUTO-SWEEP...[/bold yellow]")
                 
-                # Update target to Coinbase address
-                os.environ["COINBASE_STARKNET_ADDRESS"] = coinbase_addr
-                
-                # Execute sweep
-                sweep_result = sweep_funds()
-                
-                if sweep_result:
-                    console.print(Panel.fit(
-                        f"[bold green]✅ RECOVERY COMPLETE[/bold green]\n"
-                        f"Amount: {balance:.6f} ETH\n"
-                        f"Value: ${balance * 2200:.2f} USD\n"
-                        f"Target: {coinbase_addr}",
-                        title="Mission Success"
-                    ))
-                    
-                    # Log completion
-                    with open("recovery_log.txt", "a") as f:
-                        f.write(f"{timestamp} - RECOVERED: {balance:.6f} ETH to {coinbase_addr}\n")
-                    
-                    console.print("[dim]🏁 Ghost Sentry Loop terminated[/dim]")
-                    return
+                if sweep_funds and sweep_recommended(balance, settings):
+                    sweep_result = sweep_funds()
+                    if sweep_result:
+                        console.print(Panel.fit(
+                            f"[bold green]✅ RECOVERY COMPLETE[/bold green]\n"
+                            f"Amount: {balance:.6f} ETH\n"
+                            f"Value: ${balance * 2200:.2f} USD\n"
+                            f"Target: {coinbase_addr}",
+                            title="Mission Success"
+                        ))
+                        with open("recovery_log.txt", "a") as f:
+                            f.write(f"{timestamp} - RECOVERED: {balance:.6f} ETH to {coinbase_addr}\n")
+                        console.print("[dim]🏁 Ghost Sentry Loop terminated[/dim]")
+                        return
+                    else:
+                        console.print("[red]❌ Sweep failed, continuing monitoring[/red]")
                 else:
-                    console.print("[red]❌ Sweep failed, continuing monitoring[/red]")
+                    console.print("[yellow]⚠️ Sweep function unavailable or not recommended; continuing monitoring[/yellow]")
             else:
                 console.print(f"[dim]💰 Ghost Balance: {balance:.6f} ETH[/dim]")
                 console.print("[dim]No funds detected. Continuing sentry...[/dim]")
