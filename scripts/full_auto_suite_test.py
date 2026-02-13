@@ -19,7 +19,8 @@ if env_path.exists():
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.foundation.network import NetworkOracle
+from src.ops.env import build_config
+from src.ops.network_checks import ensure_oracle
 from src.foundation.reporting import ReportingSystem
 
 async def full_auto_suite_test():
@@ -29,10 +30,10 @@ async def full_auto_suite_test():
     # Test 1: Network Connectivity
     print('1️⃣ Testing Network Oracle...')
     try:
-        oracle = NetworkOracle()
-        await oracle.initialize()
+        config = build_config()
+        oracle = await ensure_oracle()
         
-        starknet_balance = await oracle.get_balance('0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9', 'starknet')
+        starknet_balance = await oracle.get_balance(config.starknet_address, 'starknet')
         print(f'   ✅ StarkNet Balance: {starknet_balance:.6f} ETH')
         
         threshold_met = starknet_balance >= 0.018
