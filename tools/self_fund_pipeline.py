@@ -47,9 +47,9 @@ class SelfFundingPipeline:
         # Pipeline configuration
         self.stages = {
             "coinbase_withdrawal": {
-                "name": "Coinbase CDP Withdrawal",
+                "name": "Coinbase API Withdrawal",
                 "status": "PENDING",
-                "required_creds": ["COINBASE_CDP_API_KEY", "COINBASE_CDP_API_SECRET"]
+                "required_creds": ["COINBASE_CLIENT_API_KEY", "COINBASE_API_PRIVATE_KEY"]
             },
             "base_confirmation": {
                 "name": "Base Network Confirmation", 
@@ -93,11 +93,10 @@ class SelfFundingPipeline:
         
         creds_status = {}
         
-        # Check Coinbase CDP credentials
+        # Check Coinbase API credentials
         coinbase_creds = [
-            "COINBASE_CDP_API_KEY",
-            "COINBASE_CDP_API_SECRET", 
-            "COINBASE_CDP_WALLET_ID"
+            "COINBASE_CLIENT_API_KEY",
+            "COINBASE_API_PRIVATE_KEY"
         ]
         
         for cred in coinbase_creds:
@@ -136,19 +135,35 @@ class SelfFundingPipeline:
         return creds_status
     
     async def stage_1_coinbase_withdrawal(self, amount_eth: float) -> Dict[str, Any]:
-        """Stage 1: Withdraw ETH from Coinbase CDP to Phantom (Base)"""
+        """Stage 1: Withdraw ETH from Coinbase API to Phantom (Base)"""
         
-        self.console.print("🏦 Stage 1: Coinbase CDP Withdrawal", style="bold blue")
+        self.console.print("🏦 Stage 1: Coinbase API Withdrawal", style="bold blue")
         
         try:
-            # Import CDP SDK (placeholder - would need actual installation)
-            # from coinbase.cdp import CDPClient
+            # Import Coinbase SDK (placeholder - would need coinbase-python SDK)
+            # import coinbase
+            # from coinbase.wallet.client import Client
             
-            # Placeholder implementation
-            self.console.print("⚠️  CDP SDK integration pending", style="yellow")
-            self.console.print("📝 Required: COINBASE_CDP_API_KEY, COINBASE_CDP_API_SECRET")
+            # Get credentials
+            api_key = os.getenv("COINBASE_CLIENT_API_KEY")
+            api_secret = os.getenv("COINBASE_API_PRIVATE_KEY")
+            
+            if not api_key or not api_secret:
+                raise Exception("Coinbase API credentials not found")
+            
+            # Initialize Coinbase client
+            # client = Client(api_key, api_secret)
+            
+            # Placeholder implementation using existing API
+            self.console.print("📝 Using existing Coinbase API credentials", style="green")
+            self.console.print(f"� API Key: {api_key[:20]}...")
             
             # Simulate withdrawal for demo
+            # In production, this would be:
+            # 1. Get primary account
+            # 2. Create withdrawal to Base network
+            # 3. Return transaction hash
+            
             await asyncio.sleep(2)
             
             result = {
@@ -157,10 +172,12 @@ class SelfFundingPipeline:
                 "amount": amount_eth,
                 "from_address": "COINBASE_ACCOUNT",
                 "to_address": self.base_config["phantom_address"],
+                "network": "base",
                 "timestamp": datetime.now().isoformat()
             }
             
             self.console.print(f"✅ Withdrawal simulated: {amount_eth} ETH → {self.base_config['phantom_address']}")
+            self.console.print("📝 Ready for live implementation with coinbase-python SDK")
             
             return result
             
