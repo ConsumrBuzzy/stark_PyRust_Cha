@@ -18,7 +18,7 @@ from loguru import logger
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 # Load environment variables
 load_dotenv()
@@ -52,15 +52,17 @@ class PortfolioSummary(BaseModel):
     in_transit_usd: float = Field(ge=0)
     assets: List[AssetBalance] = Field(default_factory=list)
 
-    @validator('total_usd_value')
-    def validate_totals(cls, v, values):
-        calculated = (
-            values.get('liquid_usd', 0) + 
-            values.get('locked_usd', 0) + 
-            values.get('in_transit_usd', 0)
-        )
-        if abs(v - calculated) > 0.01:  # Allow $0.01 rounding
-            raise ValueError(f"Total {v} doesn't match sum of components {calculated}")
+    @field_validator('total_usd_value')
+    @classmethod
+    def validate_totals(cls, v, info):
+        if 'liquid_usd' in info.data and 'locked_usd' in info.data and 'in_transit_usd' in info.data:
+            calculated = (
+                info.data['liquid_usd'] + 
+                info.data['locked_usd'] + 
+                info.data['in_transit_usd']
+            )
+            if abs(v - calculated) > 0.01:  # Allow $0.01 rounding
+                raise ValueError(f"Total {v} doesn't match sum of components {calculated}")
         return v
 
 class ChainProvider:
@@ -340,7 +342,7 @@ async def main():
     report = monitor.format_markdown_report(summary)
     report_path = Path("ecosystem_heartbeat.md")
     
-    with open(report_path, "w") as f:
+    with open(report_path, "w", encoding="utf-8") as f:
         f.write(report)
     
     logger.info("Report saved to {}", report_path)
