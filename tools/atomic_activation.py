@@ -398,29 +398,12 @@ class AtomicActivationEngine:
     async def estimate_transfer_cost(self, client: FullNodeClient) -> int:
         """Estimate transfer cost"""
         
-        try:
-            # Create transfer call for estimation
-            transfer_call = Call(
-                to_addr=self.eth_contract,
-                selector=get_selector_from_name("transfer"),
-                calldata=[
-                    int(self.ghost_address, 16),
-                    self.transfer_amount,
-                    0
-                ]
-            )
-            
-            # Estimate fee using starknet-py v0.29.0 API
-            fee_estimate = await client.estimate_fee(
-                transfer_call,
-                block_number="latest"
-            )
-            
-            return fee_estimate.overall_fee
-            
-        except Exception as e:
-            logger.warning(f"⚠️ Transfer cost estimation failed: {e}")
-            return int(0.003e18)  # Conservative estimate
+        # For starknet-py v0.29.0, use conservative estimate
+        # Fee estimation API has compatibility issues
+        estimated_cost = int(0.003e18)  # 0.003 ETH conservative estimate
+        
+        logger.info(f"💰 Using conservative transfer cost estimate: {estimated_cost / 1e18:.6f} ETH")
+        return estimated_cost
     
     async def execute_atomic_bundle(self, bundle: AtomicBundle, dry_run: bool = False) -> ExecutionResult:
         """Execute atomic bundle"""
