@@ -104,6 +104,11 @@ class RecoveryKernel:
                 print("❌ Failed to initialize Security Manager")
                 return False
             
+            # Initialize dedicated systems
+            self.bridge_system = BridgeSystem(self.network_oracle, self.security_manager)
+            self.activation_system = ActivationSystem(self.network_oracle, self.security_manager)
+            self.monitoring_system = MonitoringSystem(self.network_oracle, self.state_registry)
+            
             # Check if security is already unlocked
             if self.recovery_state.security_unlocked:
                 self.current_phase = RecoveryPhase.BRIDGE_EXECUTING
@@ -188,39 +193,50 @@ class RecoveryKernel:
             await self._transition_to(RecoveryPhase.BRIDGE_CONFIRMED, "Bridges already confirmed")
             return
         
-        # Check Phantom balance
-        phantom_balance = await self.network_oracle.get_balance(self.phantom_address, "base")
-        await self.state_registry.update_balances(phantom_balance, self.recovery_state.last_starknet_balance)
+        # Calculate optimal bridge amount
+        bridge_calc = await self.bridge_system.calculate_optimal_bridge_amount(self.phantom_address)
         
-        print(f"💰 Phantom balance: {phantom_balance:.6f} ETH")
+        if not bridge_calc["success"]:
+            print(f"❌ Bridge calculation failed: {bridge_calc['error']}")
+            await self._transition_to(RecoveryPhase.MISSION_FAILED, "Bridge calculation failed")
+            return
         
-        if phantom_balance > GAS_RESERVE:
-            # Execute bridge
-            bridge_amount = max(0, phantom_balance - GAS_RESERVE)
-            print(f"🌉 Executing bridge: {bridge_amount:.6f} ETH")
-            
-            bridge_result = await self.network_oracle.execute_bridge(
+        print(f"💰 Available Balance: {bridge_calc['current_balance']:.6f} ETH")
+        print(f"🌉 Bridge Amount: {bridge_calc['bridge_amount']:.6f} ETH")
+        print(f"⛽ Gas Reserve: {bridge_calc['gas_reserve']:.6f} ETH")
+        
+        if bridge_calc['bridge_amount'] <= 0:
+            print(f"❌ Insufficient balance: {bridge_calc['current_balance']:.6f} ETH <= {bridge_calc['gas_reserve']:.6f} ETH")
+            await self._transition_to(RecoveryPhase.MISSION_FAILED, "Insufficient Phantom balance")
+            return
+        
+        # Execute bridge transaction
+        bridge_result = await self.bridge_system.execute_bridge_transaction(
+            self.phantom_address,
+            self.starknet_address,
+            bridge_calc['bridge_amount']
+        )
+        
+        if bridge_result.get("success"):
+            # Add to state
+            await self.state_registry.add_bridge_transaction(
+                bridge_result["tx_hash"],
+                bridge_result["amount"],
                 self.phantom_address,
-                self.starknet_address,
-                bridge_amount
+                self.starknet_address
             )
             
-            if bridge_result.get("success"):
-                # Add to state
-                await self.state_registry.add_bridge_transaction(
-                    bridge_result["tx_hash"],
-                    bridge_amount,
-                    self.phantom_address,
-                    self.starknet_address
-                )
-                
-                await self._transition_to(RecoveryPhase.BRIDGE_CONFIRMED, f"Bridge executed: {bridge_amount:.6f} ETH")
-            else:
-                print(f"❌ Bridge failed: {bridge_result.get('error')}")
-                await self._transition_to(RecoveryPhase.MISSION_FAILED, "Bridge execution failed")
+            # Update balances
+            await self.state_registry.update_balances(
+                bridge_calc['current_balance'] - bridge_result['amount'],
+                self.recovery_state.last_starknet_balance
+            )
+            
+            self.bridge_system.print_bridge_summary(bridge_result)
+            await self._transition_to(RecoveryPhase.BRIDGE_CONFIRMED, f"Bridge executed: {bridge_result['amount']:.6f} ETH")
         else:
-            print(f"❌ Insufficient balance: {phantom_balance:.6f} ETH <= {GAS_RESERVE:.6f} ETH")
-            await self._transition_to(RecoveryPhase.MISSION_FAILED, "Insufficient Phantom balance")
+            print(f"❌ Bridge failed: {bridge_result.get('error')}")
+            await self._transition_to(RecoveryPhase.MISSION_FAILED, "Bridge execution failed")
     
     async def _handle_bridge_confirmed(self) -> None:
         """Handle bridge confirmed phase"""
