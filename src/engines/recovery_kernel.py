@@ -15,6 +15,7 @@ from ..foundation.constants import *
 from ..foundation.security import SecurityManager
 from ..foundation.network import NetworkOracle
 from ..foundation.state import StateRegistry, RecoveryState, BridgeStatus, AccountStatus
+from .bridge_system import BridgeSystem, ActivationSystem, MonitoringSystem
 
 class RecoveryPhase(Enum):
     """Recovery phase states"""
@@ -40,6 +41,11 @@ class RecoveryKernel:
         self.security_manager: Optional[SecurityManager] = None
         self.network_oracle: Optional[NetworkOracle] = None
         self.state_registry: Optional[StateRegistry] = None
+        
+        # Dedicated systems
+        self.bridge_system: Optional[BridgeSystem] = None
+        self.activation_system: Optional[ActivationSystem] = None
+        self.monitoring_system: Optional[MonitoringSystem] = None
         
         # State management
         self.current_phase: RecoveryPhase = RecoveryPhase.INITIALIZING
