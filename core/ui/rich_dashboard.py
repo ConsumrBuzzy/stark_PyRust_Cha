@@ -24,7 +24,6 @@ from rich.text import Text
 from rich.live import Live
 from rich import box
 from rich.align import Align
-from rich.gauge import Gauge
 from loguru import logger
 
 @dataclass
@@ -162,18 +161,14 @@ class StarkNetDashboard:
     def create_activation_panel(self) -> Panel:
         """Create activation status panel"""
         
-        # Progress gauge
+        # Progress bar using text
         progress = min(100, self.state.activation_progress * 100)
-        gauge_color = "green" if self.state.activation_ready else "yellow"
-        
-        gauge = Gauge(
-            progress,
-            style=gauge_color,
-            label=f"Activation Progress: {progress:.1f}%"
-        )
+        progress_bar = "█" * int(progress / 5) + "░" * (20 - int(progress / 5))
+        progress_color = "green" if self.state.activation_ready else "yellow"
         
         # Status details
         status_text = f"""
+[b]Progress:[/b] [{progress_color}]{progress_bar}[/{progress_color}] {progress:.1f}%
 [b]Threshold:[/b] {self.state.activation_threshold:.6f} ETH
 [b]Current:[/b] {self.state.starknet_balance_eth + self.state.ghost_balance_eth:.6f} ETH
 [b]Needed:[/b] {max(0, self.state.activation_threshold - (self.state.starknet_balance_eth + self.state.ghost_balance_eth)):.6f} ETH
@@ -182,11 +177,8 @@ class StarkNetDashboard:
 [b]Ghost:[/b] {'🎉 DETECTED' if self.state.ghost_detected else '👻 WAITING'}
         """.strip()
         
-        # Combine gauge and status
-        activation_content = Align.center(gauge) + "\n\n" + status_text
-        
         return Panel(
-            activation_content,
+            status_text,
             title="🎯 Activation Status",
             box=box.ROUNDED,
             border_style="green" if self.state.activation_ready else "yellow"
