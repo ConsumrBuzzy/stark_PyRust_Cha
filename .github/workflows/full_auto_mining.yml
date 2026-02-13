@@ -1,0 +1,114 @@
+name: StarkNet Full-Auto Mining Rig
+
+on:
+  schedule:
+    # High-frequency monitoring during critical window
+    - cron: '*/5 * * * *'  # Every 5 minutes
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Execution mode'
+        required: true
+        default: 'monitor'
+        type: choice
+        options:
+        - monitor
+        - full-auto
+        - telegram-test
+
+jobs:
+  full-auto-mining:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Build Rust Extension
+        run: |
+          cd rust-core
+          cargo build --release
+          cd ..
+          pip install maturin
+          maturin develop --manifest-path rust-core/Cargo.toml
+          
+      - name: Test Telegram Integration
+        if: github.event.inputs.mode == 'telegram-test'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "📱 Testing Telegram integration..."
+          python scripts/test_telegram.py
+          
+      - name: Check Mining Threshold
+        id: threshold_check
+        env:
+          STARKNET_RPC_URL: ${{ secrets.STARKNET_RPC_URL }}
+        run: |
+          python scripts/check_threshold.py >> $GITHUB_OUTPUT
+          
+      - name: Run Full-Auto Mining
+        if: steps.threshold_check.outputs.ready_for_mining == 'true' || github.event.inputs.mode == 'full-auto'
+        env:
+          STARKNET_RPC_URL: ${{ secrets.STARKNET_RPC_URL }}
+          STARKNET_WALLET_ADDRESS: ${{ secrets.STARKNET_WALLET_ADDRESS }}
+          STARKNET_PRIVATE_KEY: ${{ secrets.STARKNET_PRIVATE_KEY }}
+          INFLUENCE_API_KEY: ${{ secrets.INFLUENCE_API_KEY }}
+          SIGNER_PASSWORD: ${{ secrets.SIGNER_PASSWORD }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "🏭 Starting Full-Auto Iron → Steel Mining"
+          python main.py --full-auto
+          
+      - name: Run Monitoring Mode
+        if: steps.threshold_check.outputs.ready_for_mining == 'false' && github.event.inputs.mode != 'full-auto'
+        env:
+          STARKNET_RPC_URL: ${{ secrets.STARKNET_RPC_URL }}
+          STARKNET_WALLET_ADDRESS: ${{ secrets.STARKNET_WALLET_ADDRESS }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "🔍 Starting monitoring mode with Telegram notifications"
+          python scripts/watchdog_log.py
+          
+      - name: Send Status Report
+        if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "📊 Sending final status report..."
+          python -c "
+import asyncio
+import sys
+import os
+sys.path.insert(0, 'src')
+from src.foundation.reporting import ReportingSystem
+
+async def send_report():
+    reporting = ReportingSystem()
+    if reporting.is_enabled():
+        status = '\${{ job.status }}'
+        workflow = '\${{ github.workflow }}'
+        run_id = '\${{ github.run_id }}'
+        
+        await reporting.telegram.send_alert(
+            'GITHUB ACTIONS REPORT',
+            f'Workflow: {workflow}\nRun ID: {run_id}\nStatus: {status}\nTime: {asyncio.get_event_loop().time()}'
+        )
+
+asyncio.run(send_report())
+"

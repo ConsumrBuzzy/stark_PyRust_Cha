@@ -10,6 +10,7 @@ requests>=2.31.0
 # Structured logging and async operations
 loguru>=0.7.2
 httpx>=0.25.2
+aiohttp>=3.9.0
 
 # Web3 interactions (replace with actual implementations)
 web3>=6.11.0          # For Base/EVM chains

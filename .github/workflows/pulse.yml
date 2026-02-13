@@ -48,6 +48,8 @@ jobs:
           STARKNET_PRIVATE_KEY: ${{ secrets.STARKNET_PRIVATE_KEY }}
           INFLUENCE_API_KEY: ${{ secrets.INFLUENCE_API_KEY }}
           SIGNER_PASSWORD: ${{ secrets.SIGNER_PASSWORD }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           echo "🏭 Mining Threshold Reached - Starting Full-Auto Iron → Steel Refining"
           python main.py --full-auto
