@@ -27,7 +27,7 @@ class StarknetAuditor:
         
         # Target addresses from user request
         self.ghost_address = "0xfF01E0776369Ce51debb16DFb70F23c16d875463"
-        self.main_wallet = "os.getenv("STARKNET_WALLET_ADDRESS")"
+        self.main_wallet = os.getenv("STARKNET_WALLET_ADDRESS")
         
         logger.info("Starknet auditor initialized")
         logger.info("Ghost address: {}", self.ghost_address)
