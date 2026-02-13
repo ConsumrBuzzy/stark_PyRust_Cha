@@ -12,7 +12,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 # Add python-logic to path
-sys.path.append(os.path.join(os.getcwd(), 'python-logic'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from strategy_module import RefiningStrategy
 

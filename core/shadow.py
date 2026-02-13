@@ -12,7 +12,7 @@ from typing import Optional, Dict, List
 from datetime import datetime
 
 # Add python-logic to path
-sys.path.append(os.path.join(os.getcwd(), 'python-logic'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from loguru import logger
 from rich.console import Console
