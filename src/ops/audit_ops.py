@@ -62,7 +62,15 @@ async def run_audit(
     cfg = build_config()
     ghost = ghost_address or os.getenv("STARKNET_GHOST_ADDRESS") or cfg.phantom_address
     main = main_address or cfg.starknet_address
-    rpc = rpc_url or os.getenv("STARKNET_RPC_URL") or os.getenv("STARKNET_MAINNET_URL")
+    rpc_candidates = [
+        rpc_url,
+        os.getenv("STARKNET_MAINNET_URL"),  # prefer mainnet (Alchemy/primary)
+        os.getenv("STARKNET_RPC_URL"),
+        os.getenv("STARKNET_LAVA_URL"),
+        os.getenv("STARKNET_1RPC_URL"),
+        os.getenv("STARKNET_ONFINALITY_URL"),
+    ]
+    rpc = next((u for u in rpc_candidates if u), None)
     eth = eth_contract or int(
         os.getenv(
             "STARKNET_ETH_CONTRACT",
