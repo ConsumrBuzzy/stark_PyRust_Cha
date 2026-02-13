@@ -53,6 +53,10 @@ class RecoveryKernel:
         # Atomic bundle system
         self.atomic_bundle: Optional[AtomicBundle] = None
         
+        # Genesis and evolution systems
+        self.genesis_bundle: Optional[GenesisBundle] = None
+        self.evolution_loop: Optional[EvolutionLoop] = None
+        
         # State management
         self.current_phase: RecoveryPhase = RecoveryPhase.INITIALIZING
         self.recovery_state: Optional[RecoveryState] = None
