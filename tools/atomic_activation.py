@@ -170,10 +170,16 @@ class AtomicActivationEngine:
             if current_balance < self.bridge_amount:
                 raise Exception(f"Insufficient balance: {current_balance:.6f} ETH < {self.bridge_amount:.6f} ETH")
             
-            # Get private key for Base wallet
-            private_key = os.getenv("TRANSIT_EVM_PRIVATE_KEY")
-            if not private_key:
-                raise Exception("TRANSIT_EVM_PRIVATE_KEY not found in environment")
+            # Get private key for Base wallet (Phantom)
+            phantom_private_key = os.getenv("PHANTOM_BASE_PRIVATE_KEY")
+            if not phantom_private_key:
+                # Try to get from Solana Phantom data
+                phantom_private_key = os.getenv("PHANTOM_SOLANA_PRIVATE_KEY")
+                if not phantom_private_key:
+                    raise Exception("PHANTOM_BASE_PRIVATE_KEY not found in environment")
+            
+            # Use Phantom Base address instead of Transit
+            phantom_address = self.phantom_base_address
             
             # Create transaction
             starkgate_contract = self.base_web3.eth.contract(
@@ -190,15 +196,15 @@ class AtomicActivationEngine:
                 amount_wei,
                 starknet_address_uint
             ).build_transaction({
-                'from': self.phantom_base_address,
+                'from': phantom_address,
                 'value': amount_wei,
                 'gas': 200000,
                 'gasPrice': self.base_web3.eth.gas_price,
-                'nonce': self.base_web3.eth.get_transaction_count(self.phantom_base_address),
+                'nonce': self.base_web3.eth.get_transaction_count(phantom_address),
             })
             
             # Sign and send transaction
-            signed_tx = self.base_web3.eth.account.sign_transaction(deposit_tx, private_key)
+            signed_tx = self.base_web3.eth.account.sign_transaction(deposit_tx, phantom_private_key)
             tx_hash = self.base_web3.eth.send_raw_transaction(signed_tx.rawTransaction)
             
             self.console.print(f"📡 Bridge transaction sent: {tx_hash.hex()}")
