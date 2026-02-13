@@ -9,4 +9,5 @@ __all__ = [
     "network_checks",
     "reporting_ops",
     "clawback",
+    "ga_checks",
 ]
