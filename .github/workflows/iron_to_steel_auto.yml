@@ -62,7 +62,7 @@ jobs:
           echo "📱 STEP B: MESSENGER - Sending Fuel Detected alert"
           python scripts/step_b_fuel_alert.py
           
-      - name: Step C: Forge - Execute Genesis Bundle
+      - name: Step C - Forge Execute Genesis Bundle
         if: steps.sentry_check.outputs.ready_for_mining == 'true' && github.event.inputs.mode != 'dry-run'
         env:
           STARKNET_RPC_URL: ${{ secrets.STARKNET_RPC_URL }}
@@ -73,10 +73,10 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          echo "⚛️ STEP C: FORGE - Executing Genesis Bundle"
+          echo "⚛️ STEP C - FORGE - Executing Genesis Bundle"
           python main.py --full-auto
           
-      - name: Step D: Loop - Launch Iron → Steel Refining
+      - name: Step D - Loop Launch Iron to Steel Refining
         if: steps.sentry_check.outputs.ready_for_mining == 'true' && github.event.inputs.mode != 'dry-run'
         env:
           STARKNET_RPC_URL: ${{ secrets.STARKNET_RPC_URL }}
@@ -84,16 +84,16 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          echo "⛏️ STEP D: LOOP - Launching Iron → Steel refining"
+          echo "⛏️ STEP D - LOOP - Launching Iron → Steel refining"
           python python-logic/orchestrator.py --strategy refining
           
-      - name: Step E: Yield - Report First Steel Production
+      - name: Step E - Yield Report First Steel Production
         if: steps.sentry_check.outputs.ready_for_mining == 'true' && github.event.inputs.mode != 'dry-run'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          echo "📊 STEP E: YIELD - Reporting first Steel production"
+          echo "📊 STEP E - YIELD - Reporting first Steel production"
           python scripts/step_e_yield_report.py
           
       - name: Environment Parity Check
