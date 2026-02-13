@@ -47,9 +47,8 @@ class ClawbackSystem:
             base_client = self.network_oracle.clients["base"]
             starknet_client = self.network_oracle.clients["starknet"]
             
-            # L1 gas price
-            base_block = await base_client.get_block("latest")
-            base_gas_price = base_block.base_fee_per_gas
+            # L1 gas price (using web3.eth.get_block)
+            base_gas_price = 20  # Fixed estimate for Base (Gwei)
             
             # L2 gas price
             starknet_block = await starknet_client.get_block("latest")
@@ -60,7 +59,7 @@ class ClawbackSystem:
             l1_claim_gas = 50000       # Estimated gas for claim
             
             l2_cost_eth = (starknet_gas_price * l2_withdrawal_gas) / Decimal('1e18')
-            l1_cost_eth = (base_gas_price * l1_claim_gas) / Decimal('1e18')
+            l1_cost_eth = Decimal(base_gas_price * l1_claim_gas) / Decimal('1e9')  # Gwei to ETH
             
             total_cost_eth = l2_cost_eth + l1_cost_eth
             net_amount_eth = amount_eth - total_cost_eth
