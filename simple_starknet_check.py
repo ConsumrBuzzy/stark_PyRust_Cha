@@ -16,7 +16,14 @@ console = Console()
 def check_starknet_balance(address: str, label: str) -> dict:
     """Check ETH balance using direct JSON-RPC call"""
     
-    rpc_url = "https://starknet-mainnet.public.blastapi.io"
+    # Try multiple RPC endpoints from .env
+    rpc_urls = [
+        "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_10/9HtNv_yFeMgWsbW_gI2IN",
+        "https://rpc.starknet.lava.build:443", 
+        "https://1rpc.io/starknet",
+        "https://starknet.api.onfinality.io/public",
+        "https://starknet-mainnet.public.blastapi.io"
+    ]
     
     # ETH token contract address on Starknet
     eth_contract = "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
@@ -36,31 +43,39 @@ def check_starknet_balance(address: str, label: str) -> dict:
     }
     
     try:
-        response = requests.post(rpc_url, json=payload, timeout=10)
-        response.raise_for_status()
+        for rpc_url in rpc_urls:
+            try:
+                response = requests.post(rpc_url, json=payload, timeout=10)
+                response.raise_for_status()
+                
+                result = response.json()
+                
+                if "result" in result and len(result["result"]) > 0:
+                    balance_hex = result["result"][0]
+                    balance_wei = int(balance_hex, 16)
+                    balance_eth = balance_wei / 1e18
+                    
+                    return {
+                        "address": address,
+                        "label": label,
+                        "balance_eth": balance_eth,
+                        "balance_wei": balance_wei,
+                        "status": f"success via {rpc_url.split('//')[1].split('/')[0]}"
+                    }
+                else:
+                    continue  # Try next RPC
+                    
+            except Exception as e:
+                continue  # Try next RPC
         
-        result = response.json()
-        
-        if "result" in result and len(result["result"]) > 0:
-            balance_hex = result["result"][0]
-            balance_wei = int(balance_hex, 16)
-            balance_eth = balance_wei / 1e18
-            
-            return {
-                "address": address,
-                "label": label,
-                "balance_eth": balance_eth,
-                "balance_wei": balance_wei,
-                "status": "success"
-            }
-        else:
-            return {
-                "address": address,
-                "label": label,
-                "balance_eth": 0.0,
-                "balance_wei": 0,
-                "status": "no_balance_data"
-            }
+        # All RPCs failed
+        return {
+            "address": address,
+            "label": label,
+            "balance_eth": 0.0,
+            "balance_wei": 0,
+            "status": "all_rpcs_failed"
+        }
             
     except Exception as e:
         return {
@@ -74,7 +89,14 @@ def check_starknet_balance(address: str, label: str) -> dict:
 def check_deployment_status(address: str) -> dict:
     """Check if account is deployed by checking contract class"""
     
-    rpc_url = "https://starknet-mainnet.public.blastapi.io"
+    # Try multiple RPC endpoints
+    rpc_urls = [
+        "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_10/9HtNv_yFeMgWsbW_gI2IN",
+        "https://rpc.starknet.lava.build:443", 
+        "https://1rpc.io/starknet",
+        "https://starknet.api.onfinality.io/public",
+        "https://starknet-mainnet.public.blastapi.io"
+    ]
     
     payload = {
         "jsonrpc": "2.0",
@@ -86,32 +108,29 @@ def check_deployment_status(address: str) -> dict:
         "id": 1
     }
     
-    try:
-        response = requests.post(rpc_url, json=payload, timeout=10)
-        response.raise_for_status()
-        
-        result = response.json()
-        
-        if "result" in result:
-            return {
-                "address": address,
-                "deployed": True,
-                "status": "deployed"
-            }
-        else:
-            return {
-                "address": address,
-                "deployed": False,
-                "status": "not_deployed"
-            }
+    for rpc_url in rpc_urls:
+        try:
+            response = requests.post(rpc_url, json=payload, timeout=10)
+            response.raise_for_status()
             
-    except Exception as e:
-        # If we get an error, likely not deployed
-        return {
-            "address": address,
-            "deployed": False,
-            "status": f"not_deployed: {str(e)[:50]}"
-        }
+            result = response.json()
+            
+            if "result" in result:
+                return {
+                    "address": address,
+                    "deployed": True,
+                    "status": f"deployed via {rpc_url.split('//')[1].split('/')[0]}"
+                }
+                
+        except Exception:
+            continue  # Try next RPC
+    
+    # All RPCs failed or account not deployed
+    return {
+        "address": address,
+        "deployed": False,
+        "status": "not_deployed"
+    }
 
 def main():
     """Main execution"""
