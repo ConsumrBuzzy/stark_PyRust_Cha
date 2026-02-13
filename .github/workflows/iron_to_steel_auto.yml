@@ -43,7 +43,7 @@ jobs:
           pip install maturin
           maturin develop --manifest-path rust-core/Cargo.toml
           
-      - name: Step A: Sentry - Check Mining Threshold
+      - name: Step A - Sentry Check Mining Threshold
         id: sentry_check
         env:
           STARKNET_RPC_URL: ${{ secrets.STARKNET_RPC_URL }}
@@ -51,7 +51,7 @@ jobs:
           echo "🔍 STEP A: SENTRY - Polling Alchemy for 0.018 ETH threshold"
           python scripts/check_threshold.py >> $GITHUB_OUTPUT
           
-      - name: Step B: Messenger - Send Fuel Alert
+      - name: Step B - Messenger Send Fuel Alert
         if: steps.sentry_check.outputs.ready_for_mining == 'true'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
