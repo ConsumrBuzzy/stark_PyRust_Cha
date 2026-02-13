@@ -17,6 +17,8 @@ from starknet_py.net.full_node_client import FullNodeClient
 from starknet_py.hash.selector import get_selector_from_name
 from starknet_py.net.client_models import Call
 
+from src.ops.rpc_router import select_starknet_client
+
 from src.ops.env import build_config, load_dotenv
 
 
@@ -27,10 +29,6 @@ class AuditResult:
     deployed: bool
     deployment_status: str
     timestamp: datetime
-
-
-def _load_client(rpc_url: str) -> FullNodeClient:
-    return FullNodeClient(node_url=rpc_url)
 
 
 async def _get_eth_balance(client: FullNodeClient, address: str, eth_contract: int) -> Decimal:
