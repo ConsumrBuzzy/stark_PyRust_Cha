@@ -1,8 +1,19 @@
 import sys
 import os
+from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
+# Add src to path for shared legacy env loader
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+try:
+    from foundation.legacy_env import load_env_manual
+except Exception:
+    def load_env_manual():  # type: ignore
+        return
 
 try:
     import stark_pyrust_chain
@@ -11,24 +22,6 @@ except ImportError as e:
     sys.exit(1)
 
 console = Console()
-
-# Robust Env Loader for Windows/UTF-8 issues
-def load_env_manual():
-    env_path = ".env"
-    if not os.path.exists(env_path):
-        return
-    try:
-        with open(env_path, "r", encoding="utf-8", errors="ignore") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if "=" in line:
-                    key, val = line.split("=", 1)
-                    if key.strip() not in os.environ:
-                        os.environ[key.strip()] = val.strip()
-    except Exception as e:
-        print(f"Warning: Failed to load .env manually: {e}")
 
 def run_ghost_scanner():
     console.print(Panel.fit("[bold cyan]👻 stark_PyRust_Chain: Ghost Scanner[/bold cyan]", subtitle="ADR-031 Pre-Entry Validation"))

@@ -11,6 +11,17 @@ import json
 from decimal import Decimal
 from rich.console import Console
 from rich.panel import Panel
+from pathlib import Path
+
+# Add src to path for shared legacy env loader
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+try:
+    from foundation.legacy_env import load_env_manual
+except Exception:
+    def load_env_manual():  # type: ignore
+        return
 
 try:
     from web3 import Web3
@@ -19,24 +30,6 @@ except ImportError:
     sys.exit(1)
 
 console = Console()
-
-# Robust Env Loader
-def load_env_manual():
-    env_path = ".env"
-    if not os.path.exists(env_path): return
-    try:
-        lines = []
-        try:
-            with open(env_path, "r", encoding="utf-8") as f: lines = f.readlines()
-        except UnicodeDecodeError:
-            with open(env_path, "r", encoding="latin-1") as f: lines = f.readlines()
-        for line in lines:
-            if line.strip() and not line.strip().startswith("#") and "=" in line:
-                key, val = line.strip().split("=", 1)
-                if " #" in val: val = val.split(" #", 1)[0]
-                if key.strip() not in os.environ: os.environ[key.strip()] = val.strip()
-    except: pass
-
 load_env_manual()
 
 # Orbiter Makers (Check https://github.com/Orbiter-Finance/Orbiter-Bridge-Contracts)
