@@ -3,8 +3,6 @@ import sys
 import types
 from decimal import Decimal
 
-import pytest
-
 
 # Stub minimal web3 modules to satisfy src.foundation.network imports
 if "web3" not in sys.modules:
@@ -40,6 +38,46 @@ if "web3" not in sys.modules:
 
     sys.modules["web3"] = web3_stub
     sys.modules["web3.middleware"] = middleware_stub
+
+# Stub minimal starknet_py modules used by foundation.network
+if "starknet_py" not in sys.modules:
+    starknet_py = types.ModuleType("starknet_py")
+    net_mod = types.ModuleType("starknet_py.net")
+    fnc_mod = types.ModuleType("starknet_py.net.full_node_client")
+    selector_mod = types.ModuleType("starknet_py.hash.selector")
+    client_models_mod = types.ModuleType("starknet_py.net.client_models")
+
+    class DummyFullNodeClient:
+        def __init__(self, node_url: str):
+            self.node_url = node_url
+
+        async def get_block_number(self):
+            return 0
+
+        async def get_block(self, _latest):
+            return types.SimpleNamespace(gas_price=20)
+
+        async def call_contract(self, _call):
+            return [0]
+
+    def get_selector_from_name(_name: str):
+        return 0
+
+    class Call:
+        def __init__(self, to_addr: int, selector: int, calldata):
+            self.to_addr = to_addr
+            self.selector = selector
+            self.calldata = calldata
+
+    fnc_mod.FullNodeClient = DummyFullNodeClient
+    selector_mod.get_selector_from_name = get_selector_from_name
+    client_models_mod.Call = Call
+
+    sys.modules["starknet_py"] = starknet_py
+    sys.modules["starknet_py.net"] = net_mod
+    sys.modules["starknet_py.net.full_node_client"] = fnc_mod
+    sys.modules["starknet_py.hash.selector"] = selector_mod
+    sys.modules["starknet_py.net.client_models"] = client_models_mod
 
 from src.ops import network_checks
 from src.ops.env import OpsConfig
