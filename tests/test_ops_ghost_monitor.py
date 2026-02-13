@@ -65,7 +65,7 @@ def test_balance_with_rotation_uses_stub_client():
         eth_contract=1,
     )
     # Monkeypatch balance_via_rpc to avoid network
-    def fake_balance_via_rpc(address, rpc_url, eth_contract):
+    async def fake_balance_via_rpc(address, rpc_url, eth_contract):
         assert rpc_url == "http://fake-rpc"
         return Decimal("1")
 
