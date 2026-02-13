@@ -26,7 +26,7 @@ def generate_test_report():
     valid_workflows = 0
     for workflow in workflows:
         try:
-            with open(workflow, 'r') as f:
+            with open(workflow, 'r', encoding='utf-8') as f:
                 yaml.safe_load(f)
             print(f'   ✅ {workflow}: VALID YAML')
             valid_workflows += 1
@@ -103,7 +103,7 @@ def generate_test_report():
     # Check workflows for features
     for workflow in workflows:
         if Path(workflow).exists():
-            with open(workflow, 'r') as f:
+            with open(workflow, 'r', encoding='utf-8') as f:
                 content = f.read()
                 
                 if 'schedule:' in content:
