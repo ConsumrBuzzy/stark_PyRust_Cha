@@ -12,7 +12,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from src.engines.recovery_kernel import RecoveryKernel, RecoveryState
+from src.engines.recovery_kernel import RecoveryKernel
 
 async def main():
     """Main CLI entry point"""
@@ -78,25 +78,15 @@ async def check_status():
     print("📊 Recovery Status Check")
     print("=" * 30)
     
-    # Load persistent state
-    from src.foundation.state import PersistentState
+    # Load state registry directly
+    from src.foundation.state import StateRegistry
     
     try:
-        state = PersistentState()
-        await state.load()
-        context = await state.get_context()
+        state_registry = StateRegistry()
+        recovery_state = await state_registry.load_state()
         
-        if context:
-            print(f"📂 Current State: {context.current_state.value}")
-            print(f"💰 Phantom Balance: {context.phantom_balance:.6f} ETH")
-            print(f"💰 StarkNet Balance: {context.starknet_balance:.6f} ETH")
-            print(f"🌉 Total Bridged: {context.total_bridged:.6f} ETH")
-            print(f"🔗 Bridge Transactions: {len(context.bridge_transactions)}")
-            
-            if context.bridge_transactions:
-                print("\n🔗 Bridge History:")
-                for i, tx in enumerate(context.bridge_transactions, 1):
-                    print(f"   {i}. {tx['amount']:.6f} ETH - {tx['tx_hash'][:10]}...")
+        if recovery_state:
+            state_registry.print_status()
         else:
             print("📂 No previous recovery session found")
             
@@ -108,30 +98,30 @@ async def resume_recovery():
     print("🔄 Resuming Recovery Mission")
     print("=" * 30)
     
-    # Load previous context
-    from src.foundation.state import PersistentState
+    # Load previous state
+    from src.foundation.state import StateRegistry
     
     try:
-        state = PersistentState()
-        await state.load()
-        context = await state.get_context()
+        state_registry = StateRegistry()
+        recovery_state = await state_registry.load_state()
         
-        if not context:
+        if not recovery_state:
             print("❌ No previous recovery session found")
             return
         
-        print(f"📂 Resuming from: {context.current_state.value}")
+        print(f"📂 Resuming from: {recovery_state.current_phase}")
         
-        # Initialize kernel with previous context
-        kernel = RecoveryKernel(context.phantom_address, context.starknet_address)
-        kernel.context = context
+        # Initialize kernel with previous state
+        kernel = RecoveryKernel(recovery_state.phantom_address, recovery_state.starknet_address)
+        kernel.recovery_state = recovery_state
+        kernel.state_registry = state_registry
         
         if not await kernel.initialize():
             print("❌ Failed to initialize Recovery Kernel")
             return
         
         # Check if security is already unlocked
-        if not context.private_key_unlocked:
+        if not recovery_state.security_unlocked:
             import getpass
             print("\n🔐 Security Vault - Master Password Required")
             password = getpass.getpass("Enter Master Password: ")
