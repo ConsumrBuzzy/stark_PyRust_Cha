@@ -30,9 +30,9 @@ class CombinedAuditor:
         self.setup_logging()
         self.load_env()
         
-        # Target addresses
-        self.main_wallet = "os.getenv("STARKNET_WALLET_ADDRESS")"
-        self.ghost_address = "os.getenv("STARKNET_GHOST_ADDRESS")"
+        # Target addresses from environment
+        self.main_wallet = os.getenv("STARKNET_WALLET_ADDRESS")
+        self.ghost_address = os.getenv("STARKNET_GHOST_ADDRESS", "0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463")
         
         # Activation thresholds
         self.activation_threshold = 0.016  # ETH needed for activation
