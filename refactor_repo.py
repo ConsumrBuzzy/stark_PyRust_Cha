@@ -426,7 +426,7 @@ Thumbs.db
     def update_readme(self):
         """Update README.md with new structure"""
         
-        print("\n📖 Updating README.md...")
+        print("\n[README] Updating README.md...")
         
         readme_path = self.project_root / "README.md"
         
@@ -434,7 +434,7 @@ Thumbs.db
 
 A professional StarkNet infrastructure suite with L7 DPI bypass capabilities and automated account management.
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 stark_PyRust_Chain/
@@ -453,7 +453,7 @@ stark_PyRust_Chain/
     └── reports/        # Generated reports
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Environment Setup
 
@@ -499,7 +499,7 @@ python tools/inventory.py
 python core/providers.py
 ```
 
-## 🔐 Security Features
+## Security Features
 
 ### L7 DPI Bypass
 - Uses ERC-20 contract calls instead of account state queries
@@ -511,7 +511,7 @@ python core/providers.py
 - Automatic failover and recovery
 - Provider performance analytics
 
-## 📊 Capabilities
+## Capabilities
 
 - **Balance Monitoring**: Real-time ETH balance tracking
 - **Account Activation**: Self-funded proxy deployment
@@ -519,7 +519,7 @@ python core/providers.py
 - **Network Diagnostics**: Comprehensive RPC analysis
 - **Shadow Protocol**: Stealth monitoring capabilities
 
-## 🛠️ Development
+## Development
 
 ### Core Modules
 - `core/providers.py`: NetworkSentinel class for RPC management
@@ -531,7 +531,7 @@ python core/providers.py
 - `tools/activate.py`: Account deployment automation
 - `tools/inventory.py`: Multi-chain balance auditing
 
-## 📈 Architecture
+## Architecture
 
 This system demonstrates advanced blockchain infrastructure techniques:
 
@@ -540,7 +540,7 @@ This system demonstrates advanced blockchain infrastructure techniques:
 3. **Shadow Protocol**: Stealth balance monitoring
 4. **Automated Recovery**: Ghost fund detection and sweep
 
-## 📋 Requirements
+## Requirements
 
 - Python 3.12+
 - starknet-py
@@ -551,7 +551,7 @@ This system demonstrates advanced blockchain infrastructure techniques:
 
 See `requirements.txt` for complete dependency list.
 
-## 🔍 Monitoring
+## Monitoring
 
 The system includes comprehensive logging and reporting:
 - Real-time console output
@@ -559,7 +559,7 @@ The system includes comprehensive logging and reporting:
 - Markdown audit reports
 - Telegram notifications (optional)
 
-## 🚨 Security Notes
+## Security Notes
 
 - Never commit `.env` files
 - Use secure RPC endpoints
@@ -570,10 +570,10 @@ The system includes comprehensive logging and reporting:
 *Hardened StarkNet Infrastructure with L7 DPI Bypass*
 '''
         
-        with open(readme_path, 'w') as f:
+        with open(readme_path, 'w', encoding='utf-8') as f:
             f.write(readme_content)
         
-        print("  📄 Updated README.md")
+        print("  [README] Updated README.md")
     
     def run_refactor(self):
         """Execute the complete refactoring process"""
