@@ -10,6 +10,8 @@ from web3 import Web3
 from web3.middleware import ExtraDataToPOAMiddleware
 from starknet_py.net.full_node_client import FullNodeClient
 
+from src.ops.rpc_router import select_starknet_client
+
 from ..foundation.constants import *
 
 @dataclass
@@ -39,8 +41,23 @@ class NetworkOracle:
             self.clients["base"] = Web3(Web3.HTTPProvider(self.networks["base"].rpc_url))
             self.clients["base"].middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
             
-            # Initialize StarkNet client
-            self.clients["starknet"] = FullNodeClient(node_url=self.networks["starknet"].rpc_url)
+            # Smart RPC selection for StarkNet
+            rpc_candidates = [
+                os.getenv("STARKNET_MAINNET_URL"),
+                os.getenv("STARKNET_RPC_URL"),
+                os.getenv("STARKNET_LAVA_URL"),
+                os.getenv("STARKNET_1RPC_URL"),
+                os.getenv("STARKNET_ONFINALITY_URL"),
+                "https://starknet-mainnet.public.blastapi.io",
+                "https://1rpc.io/starknet",
+                "https://starknet.api.onfinality.io/public",
+            ]
+            client, selected = await select_starknet_client(rpc_candidates)
+            if client is None:
+                raise RuntimeError("No healthy StarkNet RPC available")
+            # Update network config for reference
+            self.networks["starknet"].rpc_url = selected
+            self.clients["starknet"] = client
             
             # Test connections
             base_block = self.clients["base"].eth.block_number
