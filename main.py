@@ -70,6 +70,7 @@ async def execute_recovery(args):
     
     # Initialize kernel
     kernel = RecoveryKernel(phantom_address, starknet_address)
+    await kernel.initialize()
     
     if not await kernel.initialize():
         print("❌ Failed to initialize Recovery Kernel")
