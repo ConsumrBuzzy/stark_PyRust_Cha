@@ -26,7 +26,7 @@ from starknet_py.net.signer.key_pair import KeyPair
 from starknet_py.hash.selector import get_selector_from_name
 from starknet_py.net.client_models import Call
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
+from web3.middleware import ExtraDataToPOAMiddleware
 
 # Import core components
 from core.factory import get_provider_factory
@@ -107,7 +107,7 @@ class AtomicActivationEngine:
         # Base network configuration
         self.base_rpc_url = "https://mainnet.base.org"
         self.base_web3 = Web3(Web3.HTTPProvider(self.base_rpc_url))
-        self.base_web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+        self.base_web3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
         
         # StarkGate bridge contract
         self.starkgate_bridge_address = "0xae0Ee0A63A2cE6BaeEFFE56e7714FB4EFE48D419"
