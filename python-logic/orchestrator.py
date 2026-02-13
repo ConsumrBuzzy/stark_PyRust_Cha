@@ -34,6 +34,11 @@ except ImportError:
     RefiningStrategy = None
     Dashboard = None
 
+try:
+    from engines.influence import RefiningStrategy as CoreRefiningStrategy
+except Exception:
+    CoreRefiningStrategy = None
+
 load_env_manual()
 
 app = typer.Typer()
