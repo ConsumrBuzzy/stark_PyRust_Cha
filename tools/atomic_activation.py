@@ -158,7 +158,10 @@ class AtomicActivationEngine:
             # Test password by trying to get signer
             os.environ["SIGNER_PASSWORD"] = password
             try:
-                keypair = self.signer.get_keypair()
+                keypair = self.signer.get_starknet_keypair()
+                if not keypair:
+                    raise Exception("Failed to retrieve keypair")
+                
                 self.master_password = password
                 self.auto_trigger_enabled = True
                 
@@ -289,7 +292,13 @@ class AtomicActivationEngine:
         provider_name, client = self.provider_factory.get_best_provider()
         
         # Get key pair from encrypted signer
-        keypair = self.signer.get_keypair()
+        keypair_data = self.signer.get_starknet_keypair()
+        if not keypair_data:
+            raise Exception("Failed to retrieve keypair from encrypted signer")
+        
+        # Create key pair from private key
+        private_key_int = int(keypair_data['private_key'], 16)
+        keypair = KeyPair.from_private_key(private_key_int)
         
         # Convert address to int
         address_int = int(self.wallet_address, 16)
@@ -430,7 +439,13 @@ class AtomicActivationEngine:
                 return result
             
             # Get key pair from encrypted signer
-            keypair = self.signer.get_keypair()
+            keypair_data = self.signer.get_starknet_keypair()
+            if not keypair_data:
+                raise Exception("Failed to retrieve keypair from encrypted signer")
+            
+            # Create key pair from private key
+            private_key_int = int(keypair_data['private_key'], 16)
+            keypair = KeyPair.from_private_key(private_key_int)
             
             # Convert address to int
             address_int = int(self.wallet_address, 16)
