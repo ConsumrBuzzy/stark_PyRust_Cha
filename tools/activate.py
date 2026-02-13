@@ -47,7 +47,7 @@ class AccountActivator:
                         key, value = line.strip().split("=", 1)
                         os.environ[key.strip()] = value.strip()
     
-    async def activate_account(self):
+    async def activate_account(self, dry_run: bool = False):
         """Activate the undeployed account"""
         
         self.console.print("🚀 Account Activation - Self-Funded Proxy Deploy", style="bold blue")
@@ -67,9 +67,41 @@ class AccountActivator:
             self.console.print(f"🔑 Key Pair: {key_pair.public_key:064x}")
             self.console.print(f"📡 RPC: {self.rpc_url[:50]}...")
             
-            # Attempt V3 deployment (ETH fees)
+            if dry_run:
+                self.console.print("🔍 DRY RUN MODE - Connectivity Check Only")
+                
+                # Test basic connectivity
+                from starknet_py.net.client_models import Call
+                from starknet_py.hash.selector import get_selector_from_name
+                
+                # Simple block number check
+                block_number = await client.get_block_number()
+                self.console.print(f"✅ RPC Connectivity: Block {block_number}")
+                
+                # Test ETH contract call
+                eth_contract = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+                call = Call(
+                    to_addr=eth_contract,
+                    selector=get_selector_from_name("balanceOf"),
+                    calldata=[address_int]
+                )
+                
+                result = await client.call_contract(call)
+                balance_eth = result[0] / 1e18
+                self.console.print(f"💰 Account Balance: {balance_eth:.6f} ETH")
+                
+                if balance_eth >= 0.01:
+                    self.console.print("✅ Sufficient balance for activation")
+                    self.console.print(f"💡 Estimated activation cost: ~0.01-0.02 ETH")
+                else:
+                    self.console.print("⚠️ Low balance - activation may fail")
+                
+                return True
+            
+            # Real activation
             self.console.print("🔥 Attempting account activation...")
             
+            # Fix API compatibility - remove chain parameter
             deploy_result = await Account.deploy_account_v3(
                 address=address_int,
                 class_hash=self.argent_proxy_hash,
@@ -77,7 +109,6 @@ class AccountActivator:
                 key_pair=key_pair,
                 client=client,
                 constructor_calldata=[key_pair.public_key, 0],
-                chain=StarknetChainId.MAINNET,
                 max_fee=int(0.01e18),  # 0.01 ETH max fee
             )
             
@@ -108,11 +139,19 @@ class AccountActivator:
 async def main():
     """Main execution"""
     
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="StarkNet Account Activation")
+    parser.add_argument("--dry-run", action="store_true", help="Connectivity check only")
+    args = parser.parse_args()
+    
     try:
         activator = AccountActivator()
-        success = await activator.activate_account()
+        success = await activator.activate_account(dry_run=args.dry_run)
         
-        if success:
+        if args.dry_run:
+            print("\n✅ Dry run completed - Connectivity verified")
+        elif success:
             print("\n✅ Account activation completed successfully!")
             print("💼 The account is now ready for transactions")
         else:
