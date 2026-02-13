@@ -356,6 +356,15 @@ class RecoveryKernel:
     
     async def _handle_activation_complete(self) -> None:
         """Handle activation complete phase"""
+        # Get transaction hash from state
+        tx_hash = "unknown"  # This would be tracked during activation
+        if self.recovery_state and hasattr(self.recovery_state, 'activation_tx_hash'):
+            tx_hash = self.recovery_state.activation_tx_hash
+        
+        # Send Telegram notification
+        if self.reporting_system and self.reporting_system.is_enabled():
+            await self.reporting_system.account_activated(self.starknet_address, tx_hash)
+        
         await self._transition_to(RecoveryPhase.MISSION_SUCCESS, "Mission completed successfully")
     
     async def _handle_mission_success(self) -> None:
