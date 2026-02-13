@@ -81,32 +81,6 @@ def find_funds():
     if poll_mode:
         console.print("[yellow]Polling cycle finished or timed out.[/yellow]")
 
-async def _do_sweep_execution(client, ghost_addr, target_addr, priv_key):
-    # Visionary Priority: 1.5 Gwei max_fee per user directive
-    GAS_BUFFER_ETH = 0.0001
-    GAS_PRICE_GWEI = 1.5
-    
-    bal_eth = await _do_balance_check(client, ghost_addr)
-    if bal_eth <= GAS_BUFFER_ETH:
-        console.print(f"[red]❌ Balance too low to sweep ({bal_eth:.6f} ETH)[/red]")
-        return False
-
-    sweep_amount = bal_eth - GAS_BUFFER_ETH
-    console.print(f"[bold cyan]Sweep Plan (RPC verified):[/bold cyan]")
-    console.print(f"   Value: {sweep_amount:.8f} ETH")
-    console.print(f"   Priority: {GAS_PRICE_GWEI} Gwei")
-
-    if "--confirm" not in sys.argv:
-        console.print("[yellow]⚠️  Simulation only. Run with --confirm to sign and broadcast.[/yellow]")
-        return True
-
-    console.print("[bold red]☢️ BROADCASTING SECP256K1 TRANSACTION...[/bold red]")
-    # TODO: Implement actual signing using the transit account and Secp256k1
-    return True
-
-async def execute_sweep(ghost_addr, target_addr, priv_key):
-    await rpc_manager.call_with_rotation(_do_sweep_execution, ghost_addr, target_addr, priv_key)
-
 def sweep_funds():
     ghost = get_ghost_address()
     target = settings.main_address
@@ -120,7 +94,17 @@ def sweep_funds():
                           f"From: {ghost}\n"
                           f"To: {target}"))
     
-    asyncio.run(execute_sweep(ghost, target, priv_key))
+    # Check latest balance before sweep
+    bal, _ = asyncio.run(balance_with_rotation(ghost, settings.rpc_urls, settings.eth_contract))
+    if bal is None or bal <= settings.ghost_threshold_eth:
+        console.print(f"[yellow]⚠️ Balance {bal or 0:.6f} ETH below threshold; sweep skipped[/yellow]")
+        return
+
+    # Placeholder: actual sweep signing not implemented
+    if "--confirm" in sys.argv:
+        console.print("[bold red]☢️ BROADCASTING (stub) SECP256K1 TRANSACTION...[/bold red]")
+    else:
+        console.print("[yellow]Simulation only. Run with --confirm to sign and broadcast (not implemented).[/yellow]")
 
 if __name__ == "__main__":
     load_env()
