@@ -1,109 +1,76 @@
 """
 Salt Finder - Brute Force Account Derivation
-===========================================
-Finds the exact class_hash and salt combination for Argent Web Wallet
+Uses core AddressSearchEngine for common Argent hashes/salts.
 """
 
-import os
 import asyncio
-from starknet_py.hash.address import compute_address
-from starknet_py.net.signer.key_pair import KeyPair
+import os
+import sys
+from pathlib import Path
 
-def load_env():
-    env_path = ".env"
-    if not os.path.exists(env_path): return
-    with open(env_path, "r", encoding="utf-8") as f:
-        for line in f:
-            if "=" in line and not line.startswith("#"):
-                k, v = line.strip().split("=", 1)
-                os.environ[k.strip()] = v.strip()
+# Add src to path
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-load_env()
+try:
+    from foundation.legacy_env import load_env_manual
+    from engines.search import AddressSearchEngine
+except Exception as e:
+    print(f"❌ Failed to import core modules: {e}")
+    raise
+
 
 async def find_account_parameters():
-    """Find the exact parameters that generate the target address"""
-    
-    # Target address
-    target_address = "os.getenv("STARKNET_WALLET_ADDRESS")"
-    target_int = int(target_address, 16)
-    
-    # Private key for public key calculation
-    private_key_str = os.getenv("STARKNET_PRIVATE_KEY")
-    if not private_key_str:
-        print("❌ Missing STARKNET_PRIVATE_KEY")
-        return
-        
-    private_key = int(private_key_str, 16)
-    key_pair = KeyPair.from_private_key(private_key)
-    public_key = key_pair.public_key
-    
-    print(f"🔍 Searching for parameters that generate: {target_address}")
-    print(f"🔑 Public Key: {hex(public_key)}")
-    
-    # Common Argent Web Wallet class hashes
-    argent_class_hashes = [
-        # Standard Argent Cairo 1.0 Web Account
-        0x01a7366993b74e484c2fa434313f89832207b53f609e25d26a27a26a27a26a27,
-        # Alternative Argent class hashes (smaller values to avoid overflow)
-        0x03331bb0b7b955dfb643775cf5ead54378770cd0b58851eb065b5453c4f15089,
-        0x041d788f01c2b6f914b5fd7e07b5e4b0e9e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5,
+    load_env_manual()
+    engine = AddressSearchEngine()
+
+    # Common Argent hashes
+    argent_hashes = [
+        0x01A7366993B74E484C2FA434313F89832207B53F609E25D26A27A26A27A26A27,
+        0x03331BB0B7B955DFB643775CF5EAD54378770CD0B58851EB065B5453C4F15089,
+        0x041D788F01C2B6F914B5FD7E07B5E4B0E9E5E5E5E5E5E5E5E5E5E5E5E5E5E5E5E5,
     ]
-    
-    # Common salt values
-    salt_candidates = [
-        0,
-        1,
-        public_key % 2**64,  # Truncate to 64 bits
-        12345,  # Common test salt
+
+    salt_candidates = [0, 1, None, 12345]  # None placeholder for pub-key-based salt
+
+    # Constructor patterns; None will be replaced by salt in engine
+    constructor_patterns = [
+        [None],
+        [None, 0],
+        [None, 1],
+        [None, None],
     ]
-    
-    print(f"\n🧪 Testing {len(argent_class_hashes)} class hashes × {len(salt_candidates)} salts = {len(argent_class_hashes) * len(salt_candidates)} combinations")
-    
-    for i, class_hash in enumerate(argent_class_hashes):
-        print(f"\n📋 Testing Class Hash {i+1}/{len(argent_class_hashes)}: {hex(class_hash)}")
-        
-        for j, salt in enumerate(salt_candidates):
-            # Try different constructor calldata patterns
-            constructor_patterns = [
-                [public_key],  # Simple owner only
-                [public_key, 0],  # Owner + guardian (0 = no guardian)
-                [public_key, 1],  # Owner + guardian (1 = default)
-                [public_key, target_int],  # Owner + self as guardian
-            ]
-            
-            for k, calldata in enumerate(constructor_patterns):
-                computed_address = compute_address(
-                    class_hash=class_hash,
-                    constructor_calldata=calldata,
-                    salt=salt,
-                    deployer_address=0
-                )
-                
-                if computed_address == target_int:
-                    print(f"\n🎉 **MATCH FOUND!** 🎉")
-                    print(f"Class Hash: {hex(class_hash)}")
-                    print(f"Salt: {salt} ({hex(salt)})")
-                    print(f"Constructor Calldata: {calldata}")
-                    print(f"Computed Address: {hex(computed_address)}")
-                    print(f"Target Address: {hex(target_int)}")
-                    
-                    # Save the parameters for deployment
-                    with open("deployment_params.txt", "w") as f:
-                        f.write(f"class_hash={hex(class_hash)}\n")
-                        f.write(f"salt={salt}\n")
-                        f.write(f"constructor_calldata={calldata}\n")
-                        f.write(f"target_address={target_address}\n")
-                    
-                    return {
-                        "class_hash": class_hash,
-                        "salt": salt,
-                        "constructor_calldata": calldata,
-                        "target_address": target_address
-                    }
-    
-    print(f"\n❌ No match found for {target_address}")
-    print("⚠️ This account may use a custom class_hash or salt not in our list")
-    return None
+
+    # If salt None, we let the engine substitute salt; engine also allows explicit salts
+    salts = []
+    for s in salt_candidates:
+        if s is None:
+            continue
+        salts.append(s)
+
+    # Use engine with provided salts and patterns (salt placeholders handled by engine)
+    result = engine.expanded_search(
+        hashes=argent_hashes,
+        salt_range=0,  # not used when salt_values provided
+        salt_values=salts,
+        constructor_patterns=constructor_patterns,
+    )
+
+    if result.get("success"):
+        print(f"\n🎉 **MATCH FOUND!** 🎉")
+        print(f"Class Hash: {result['hash']}")
+        print(f"Salt: {result['salt']}")
+        print(f"Constructor Calldata: {result['calldata']}")
+        print(f"Target Address: {result['target']}")
+        with open("deployment_params.txt", "w") as f:
+            f.write(f"class_hash={result['hash']}\n")
+            f.write(f"salt={result['salt']}\n")
+            f.write(f"constructor_calldata={result['calldata']}\n")
+            f.write(f"target_address={result['target']}\n")
+    else:
+        print("\n❌ No match found")
+        print("⚠️ This account may use a custom class_hash or salt not in our list")
+
 
 if __name__ == "__main__":
     asyncio.run(find_account_parameters())
