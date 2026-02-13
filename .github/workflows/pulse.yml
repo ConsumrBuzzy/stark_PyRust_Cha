@@ -1,4 +1,4 @@
-name: Starknet Pulse (Jitter)
+name: Starknet Mining Rig - Network Sentry
 
 on:
   schedule:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-bot:
+  network-sentry:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,18 +27,55 @@ jobs:
           
       - name: Build Rust Extension
         run: |
-          # Install maturin
+          cd rust-core
+          cargo build --release
+          cd ..
+          # Install the built Python extension
+          pip install rust-core/target/release/*.whl || echo "Wheel not found, using maturin fallback"
           pip install maturin
-          # Build in releaes mode (using build_rust.py wrapper or direct maturin)
-          # Wrapper might fail on Linux if paths differ? direct maturin is safer for CI.
-          # actually build_rust.py is simple wrapper. Let's try it.
-          python build_rust.py
+          maturin develop --manifest-path rust-core/Cargo.toml
           
-      - name: Run Pulse
+      - name: Check Mining Threshold
+        id: threshold_check
+        run: |
+          python -c "
+import sys
+sys.path.insert(0, 'src')
+from src.foundation.network import NetworkOracle
+import asyncio
+
+async def check_threshold():
+    oracle = NetworkOracle()
+    await oracle.initialize()
+    balance = await oracle.get_balance('0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9', 'starknet')
+    print(f'balance={balance}')
+    if balance >= 0.018:
+        print('ready=true')
+        print('ready_for_mining=true')
+    else:
+        print('ready=false')
+        print('ready_for_mining=false')
+
+asyncio.run(check_threshold())
+" >> $GITHUB_OUTPUT
+          
+      - name: Run Network Sentry
+        if: steps.threshold_check.outputs.ready_for_mining == 'true'
         env:
           STARKNET_RPC_URL: ${{ secrets.STARKNET_RPC_URL }}
           STARKNET_WALLET_ADDRESS: ${{ secrets.STARKNET_WALLET_ADDRESS }}
           STARKNET_PRIVATE_KEY: ${{ secrets.STARKNET_PRIVATE_KEY }}
           INFLUENCE_API_KEY: ${{ secrets.INFLUENCE_API_KEY }}
+          SIGNER_PASSWORD: ${{ secrets.SIGNER_PASSWORD }}
         run: |
-          python python-logic/orchestrator.py pulse --dry-run
+          echo "🏭 Mining Threshold Reached - Starting Iron → Steel Refining"
+          python python-logic/orchestrator.py --strategy refining
+          
+      - name: Run Pulse Check
+        if: steps.threshold_check.outputs.ready_for_mining == 'false'
+        env:
+          STARKNET_RPC_URL: ${{ secrets.STARKNET_RPC_URL }}
+          STARKNET_WALLET_ADDRESS: ${{ secrets.STARKNET_WALLET_ADDRESS }}
+        run: |
+          echo "🔍 Network Sentry - Monitoring for Mining Threshold"
+          python main.py --status

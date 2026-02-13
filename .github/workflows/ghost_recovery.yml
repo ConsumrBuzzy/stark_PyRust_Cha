@@ -1,11 +1,12 @@
-name: Ghost Fund Recovery
+name: Starknet Mining Rig - Automated Recovery
+
 on:
   schedule:
     - cron: '*/10 * * * *' # Every 10 minutes
   workflow_dispatch: # Allows manual trigger
 
 jobs:
-  rescue:
+  automated-recovery:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -15,10 +16,53 @@ jobs:
           python-version: '3.10'
       - name: Install Dependencies
         run: pip install starknet-py web3 rich
-      - name: Run Rescue Script
+      - name: Check Recovery State
+        id: state_check
+        run: |
+          python -c "
+import sys
+import os
+sys.path.insert(0, 'src')
+from src.foundation.state import StateRegistry
+import asyncio
+
+async def check_state():
+    state_registry = StateRegistry()
+    recovery_state = await state_registry.load_state()
+    if recovery_state:
+        print(f'has_state=true')
+        print(f'current_phase={recovery_state.current_phase}')
+        print(f'total_bridged={recovery_state.total_bridged}')
+        if recovery_state.mission_active:
+            print(f'mission_active=true')
+        else:
+            print(f'mission_active=false')
+    else:
+        print(f'has_state=false')
+        print(f'current_phase=none')
+        print(f'total_bridged=0')
+        print(f'mission_active=false')
+
+asyncio.run(check_state())
+" >> $GITHUB_OUTPUT
+      - name: Run Unified Recovery Engine
+        if: steps.state_check.outputs.mission_active == 'true'
+        env:
+          PHANTOM_BASE_PRIVATE_KEY: ${{ secrets.TRANSIT_EVM_PRIVATE_KEY }}
+          SOLANA_PRIVATE_KEY: ${{ secrets.TRANSIT_EVM_PRIVATE_KEY }}
+          STARKNET_WALLET_ADDRESS: ${{ secrets.STARKNET_WALLET_ADDRESS }}
+          STARKNET_MAINNET_URL: ${{ secrets.STARKNET_RPC_URL }}
+          SIGNER_PASSWORD: ${{ secrets.SIGNER_PASSWORD }}
+        run: |
+          echo "🚀 Starting Unified Recovery Engine"
+          python main.py --resume
+      - name: Run Legacy Recovery Fallback
+        if: steps.state_check.outputs.has_state == 'false'
         env:
           TRANSIT_EVM_PRIVATE_KEY: ${{ secrets.TRANSIT_EVM_PRIVATE_KEY }}
           TRANSIT_EVM_ADDRESS: ${{ secrets.TRANSIT_EVM_ADDRESS }}
           STARKNET_WALLET_ADDRESS: ${{ secrets.STARKNET_WALLET_ADDRESS }}
           STARKNET_MAINNET_URL: ${{ secrets.STARKNET_RPC_URL }}
-        run: python rescue_funds.py --find --sweep --verbose
+        run: |
+          echo "🔄 Running Legacy Recovery Fallback"
+          python rescue_funds.py --find --sweep --verbose
