@@ -12,12 +12,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from src.foundation.network import NetworkOracle
 from src.foundation.state import StateRegistry
+from src.foundation.reporting import ReportingSystem
 
 async def watchdog_log():
     oracle = NetworkOracle()
     await oracle.initialize()
     
     state_registry = StateRegistry()
+    reporting_system = ReportingSystem()
     
     phantom_address = '0xbd5fdCDc18FA0B0764861996CC9482f0526EEDd9'
     starknet_address = '0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9'
@@ -26,6 +28,10 @@ async def watchdog_log():
     print('=' * 60)
     print('🔒 SAFE-EXECUTION MODE ACTIVE')
     print('🛡️ SAFETY INTERLOCKS: Gas Ceiling | Dust Protection | State-Lock')
+    if reporting_system.is_enabled():
+        print('📱 TELEGRAM NOTIFICATIONS: ENABLED')
+    else:
+        print('📱 TELEGRAM NOTIFICATIONS: DISABLED')
     print('=' * 60)
     
     while True:
