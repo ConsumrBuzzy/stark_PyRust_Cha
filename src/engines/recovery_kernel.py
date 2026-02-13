@@ -47,7 +47,8 @@ class RecoveryKernel:
         self.reporting_system = ReportingSystem()
         
         # Initialize network connections
-        asyncio.run(self.network_oracle.initialize())
+        # Note: Don't call asyncio.run() in __init__, let the caller handle initialization
+        self._initialized = False
         
         # Dedicated systems
         self.bridge_system: Optional[BridgeSystem] = None
@@ -84,6 +85,17 @@ class RecoveryKernel:
             RecoveryPhase.MISSION_SUCCESS: self._handle_mission_success,
             RecoveryPhase.MISSION_FAILED: self._handle_mission_failed,
         }
+    
+    async def initialize(self):
+        """Initialize network connections asynchronously"""
+        if not self._initialized:
+            await self.network_oracle.initialize()
+            self._initialized = True
+    
+    async def ensure_initialized(self):
+        """Ensure the kernel is initialized before use"""
+        if not self._initialized:
+            await self.initialize()
     
     async def initialize(self) -> bool:
         """Initialize the Recovery Kernel"""
