@@ -44,6 +44,7 @@ vault.bin
 recovery_kits/
 private_keys/
 secrets/
+rust-core/*.log
 
 # Project Specific
 *.pyd
