@@ -15,6 +15,7 @@ from ..foundation.constants import *
 from ..foundation.security import SecurityManager
 from ..foundation.network import NetworkOracle
 from ..foundation.state import StateRegistry, RecoveryState, BridgeStatus, AccountStatus
+from ..foundation.reporting import ReportingSystem
 from .bridge_system import BridgeSystem, ActivationSystem, MonitoringSystem
 from .enhanced_monitoring import EnhancedMonitoringSystem, AtomicBundle, MonitoringMode
 from .evolution_loop import EvolutionLoop, GenesisBundle, AgentState
@@ -39,10 +40,14 @@ class RecoveryKernel:
         self.phantom_address = phantom_address
         self.starknet_address = starknet_address
         
-        # Core components
-        self.security_manager: Optional[SecurityManager] = None
-        self.network_oracle: Optional[NetworkOracle] = None
-        self.state_registry: Optional[StateRegistry] = None
+        # Initialize foundation systems
+        self.network_oracle = NetworkOracle()
+        self.security_manager = SecurityManager()
+        self.state_registry = StateRegistry()
+        self.reporting_system = ReportingSystem()
+        
+        # Initialize network connections
+        asyncio.run(self.network_oracle.initialize())
         
         # Dedicated systems
         self.bridge_system: Optional[BridgeSystem] = None
@@ -312,6 +317,13 @@ class RecoveryKernel:
     
     async def _handle_mint_confirmed(self) -> None:
         """Handle mint confirmed phase"""
+        # Get current balance for notification
+        balance = await self.network_oracle.get_balance(self.starknet_address, 'starknet')
+        
+        # Send Telegram notification
+        if self.reporting_system and self.reporting_system.is_enabled():
+            await self.reporting_system.bridge_minted(float(balance), self.starknet_address)
+        
         await self._transition_to(RecoveryPhase.ACTIVATION_EXECUTING, "Mint confirmed, ready for activation")
     
     async def _handle_activation_executing(self) -> None:
