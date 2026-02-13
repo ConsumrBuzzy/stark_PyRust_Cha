@@ -1,5 +1,6 @@
 import sys
 import types
+import asyncio
 from decimal import Decimal
 
 # Stub starknet_py modules used by ghost_monitor
