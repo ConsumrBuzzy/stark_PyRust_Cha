@@ -16,6 +16,7 @@ from ..foundation.security import SecurityManager
 from ..foundation.network import NetworkOracle
 from ..foundation.state import StateRegistry, RecoveryState, BridgeStatus, AccountStatus
 from .bridge_system import BridgeSystem, ActivationSystem, MonitoringSystem
+from .enhanced_monitoring import EnhancedMonitoringSystem, AtomicBundle, MonitoringMode
 
 class RecoveryPhase(Enum):
     """Recovery phase states"""
@@ -46,6 +47,10 @@ class RecoveryKernel:
         self.bridge_system: Optional[BridgeSystem] = None
         self.activation_system: Optional[ActivationSystem] = None
         self.monitoring_system: Optional[MonitoringSystem] = None
+        self.enhanced_monitoring: Optional[EnhancedMonitoringSystem] = None
+        
+        # Atomic bundle system
+        self.atomic_bundle: Optional[AtomicBundle] = None
         
         # State management
         self.current_phase: RecoveryPhase = RecoveryPhase.INITIALIZING
@@ -108,6 +113,13 @@ class RecoveryKernel:
             self.bridge_system = BridgeSystem(self.network_oracle, self.security_manager)
             self.activation_system = ActivationSystem(self.network_oracle, self.security_manager)
             self.monitoring_system = MonitoringSystem(self.network_oracle, self.state_registry)
+            self.enhanced_monitoring = EnhancedMonitoringSystem(self.network_oracle, self.state_registry)
+            
+            # Initialize atomic bundle
+            self.atomic_bundle = AtomicBundle(self.activation_system)
+            
+            # Initialize UI if available
+            self.enhanced_monitoring.initialize_ui()
             
             # Check if security is already unlocked
             if self.recovery_state.security_unlocked:
