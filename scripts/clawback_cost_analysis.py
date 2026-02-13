@@ -101,9 +101,18 @@ async def clawback_cost_analysis():
     print(f'\n🚨 EMERGENCY EXIT SCENARIO')
     print('=' * 25)
     print('If you MUST exit immediately (ignoring profitability):')
-    print(f'   You would receive: ${cost_analysis["net_amount_usd"]:.2f}')
-    print(f'   Total loss: ${total_invested_usd - cost_analysis["net_amount_usd"]:.2f}')
-    print(f'   Recovery rate: {(cost_analysis["net_amount_usd"] / total_invested_usd) * 100:.1f}%')
+    
+    # Use the last successful cost analysis
+    if cost_analysis.get("profitable", False) and "net_amount_usd" in cost_analysis:
+        print(f'   You would receive: ${cost_analysis["net_amount_usd"]:.2f}')
+        print(f'   Total loss: ${total_invested_usd - cost_analysis["net_amount_usd"]:.2f}')
+        print(f'   Recovery rate: {(cost_analysis["net_amount_usd"] / total_invested_usd) * 100:.1f}%')
+    else:
+        # Simple calculation based on current balance
+        current_value_usd = float(current_starknet_balance) * 2200
+        print(f'   You would receive: ${current_value_usd:.2f} (estimated)')
+        print(f'   Total loss: ${total_invested_usd - current_value_usd:.2f}')
+        print(f'   Recovery rate: {(current_value_usd / total_invested_usd) * 100:.1f}%')
     
     print(f'\n🛡️ EXIT HATCH STATUS: READY')
     print('The Escape Hatch is bolted on and ready for manual activation.')
