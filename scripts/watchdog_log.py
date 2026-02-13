@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+"""
+Watchdog Log - Real-time Full-Auto Telemetry
+"""
+
+import asyncio
+import sys
+import os
+import time
+from datetime import datetime
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from src.foundation.network import NetworkOracle
+from src.foundation.state import StateRegistry
+
+async def watchdog_log():
+    oracle = NetworkOracle()
+    await oracle.initialize()
+    
+    state_registry = StateRegistry()
+    
+    phantom_address = '0xbd5fdCDc18FA0B0764861996CC9482f0526EEDd9'
+    starknet_address = '0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9'
+    
+    print('🐕 FULL-AUTO WATCHDOG LOG')
+    print('=' * 60)
+    print('🔒 SAFE-EXECUTION MODE ACTIVE')
+    print('🛡️ SAFETY INTERLOCKS: Gas Ceiling | Dust Protection | State-Lock')
+    print('=' * 60)
+    
+    while True:
+        try:
+            timestamp = datetime.now().strftime('%H:%M:%S')
+            
+            # Get balances
+            phantom_balance = await oracle.get_balance(phantom_address, 'base')
+            starknet_balance = await oracle.get_balance(starknet_address, 'starknet')
+            
+            # Get state
+            recovery_state = await state_registry.load_state()
+            
+            # Check gas price
+            client = oracle.clients["starknet"]
+            block = await client.get_block("latest")
+            gas_price = getattr(block, 'gas_price', 20)
+            
+            # Safety checks
+            gas_safe = gas_price <= 100
+            threshold_met = float(starknet_balance) >= 0.018
+            
+            print(f'⏰ {timestamp} | 💰 StarkNet: {starknet_balance:.6f} ETH | 👻 Phantom: {phantom_balance:.6f} ETH | ⛽ Gas: {gas_price} Gwei {"🟢" if gas_safe else "🔴"} | 🎯 {"READY" if threshold_met else "WAITING"}')
+            
+            # State status
+            if recovery_state:
+                print(f'   📂 State: {recovery_state.current_phase} | Mission: {"ACTIVE" if recovery_state.mission_active else "INACTIVE"}')
+            
+            # Safety alerts
+            if not gas_safe:
+                print(f'   ⚠️  GAS ALERT: Price exceeds 100 Gwei ceiling!')
+            
+            if threshold_met:
+                print(f'   🎯 THRESHOLD REACHED: Full-Auto will execute Genesis Bundle!')
+                break
+            
+            # Check for errors
+            if recovery_state and recovery_state.current_phase == "mission_failed":
+                print(f'   ❌ MISSION FAILED: Manual review required!')
+                break
+            
+            print('-' * 60)
+            await asyncio.sleep(60)  # 60-second heartbeat
+            
+        except Exception as e:
+            print(f'❌ Watchdog Error: {e}')
+            await asyncio.sleep(30)
+
+if __name__ == "__main__":
+    print('🐕 Starting Watchdog Log - Press Ctrl+C to stop')
+    try:
+        asyncio.run(watchdog_log())
+    except KeyboardInterrupt:
+        print('\n🛑 Watchdog stopped by user')
