@@ -173,6 +173,90 @@ class ClawbackSystem:
         """List all withdrawals"""
         return self.withdrawal_history.copy()
 
+
+class OrbiterBridgeAdapter:
+    """Base → StarkNet bridge via Orbiter maker with destination code embedding."""
+
+    def __init__(self, base_web3: Web3, security_manager: SecurityManager, maker_address: str, destination_code: int = 9004, min_amount_eth: float = 0.005):
+        self.base_web3 = base_web3
+        self.security_manager = security_manager
+        self.maker_address = maker_address
+        self.destination_code = destination_code
+        self.min_amount_eth = min_amount_eth
+
+    async def _resolve_private_key(self, override_key: Optional[str] = None) -> Optional[str]:
+        # Priority: explicit override -> TRANSIT_EVM_PRIVATE_KEY env -> security manager (if unlocked)
+        if override_key:
+            return override_key
+        env_key = os.getenv("TRANSIT_EVM_PRIVATE_KEY")
+        if env_key:
+            return env_key
+        # SecurityManager requires unlocked vault; tolerate None
+        try:
+            return await self.security_manager.get_phantom_private_key()
+        except Exception:
+            return None
+
+    async def get_balance(self, address: str) -> float:
+        try:
+            wei = self.base_web3.eth.get_balance(address)
+            return float(self.base_web3.from_wei(wei, 'ether'))
+        except Exception:
+            return 0.0
+
+    async def bridge_to_starknet(self, amount_eth: float, transit_address: str, dry_run: bool = True, override_key: Optional[str] = None) -> Dict[str, Any]:
+        if amount_eth < self.min_amount_eth:
+            return {"success": False, "error": f"Amount below Orbiter minimum ({self.min_amount_eth} ETH)"}
+
+        private_key = await self._resolve_private_key(override_key)
+        if not private_key:
+            return {"success": False, "error": "No EVM private key available (TRANSIT_EVM_PRIVATE_KEY or security vault)"}
+
+        try:
+            account = self.base_web3.eth.account.from_key(private_key)
+        except Exception as e:
+            return {"success": False, "error": f"Invalid EVM key: {e}"}
+
+        wei_amount = self.base_web3.to_wei(amount_eth, 'ether')
+        final_wei = (wei_amount // 10000 * 10000) + self.destination_code
+        final_eth = self.base_web3.from_wei(final_wei, 'ether')
+
+        payload = {
+            "to": self.base_web3.to_checksum_address(self.maker_address),
+            "value": int(final_wei),
+            "gas": 100000,
+            "gasPrice": self.base_web3.eth.gas_price,
+            "nonce": self.base_web3.eth.get_transaction_count(account.address),
+            "chainId": 8453,
+        }
+
+        if dry_run:
+            return {
+                "success": True,
+                "dry_run": True,
+                "payload": payload,
+                "amount_eth": float(final_eth),
+                "maker": self.maker_address,
+            }
+
+        try:
+            signed_tx = self.base_web3.eth.account.sign_transaction(payload, private_key)
+            tx_hash = self.base_web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+            receipt = self.base_web3.eth.wait_for_transaction_receipt(tx_hash, timeout=BRIDGE_TIMEOUT)
+
+            if receipt.status == 1:
+                return {
+                    "success": True,
+                    "tx_hash": tx_hash.hex(),
+                    "block_number": receipt.blockNumber,
+                    "gas_used": receipt.gasUsed,
+                    "amount_eth": float(final_eth),
+                    "maker": self.maker_address,
+                }
+            return {"success": False, "error": "Orbiter bridge failed", "tx_hash": tx_hash.hex()}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
 class BridgeSystem:
     """Dedicated bridge system extracted from atomic_activation.py"""
     
