@@ -38,26 +38,7 @@ jobs:
       - name: Check Mining Threshold
         id: threshold_check
         run: |
-          python -c "
-import sys
-sys.path.insert(0, 'src')
-from src.foundation.network import NetworkOracle
-import asyncio
-
-async def check_threshold():
-    oracle = NetworkOracle()
-    await oracle.initialize()
-    balance = await oracle.get_balance('0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9', 'starknet')
-    print(f'balance={balance}')
-    if balance >= 0.018:
-        print('ready=true')
-        print('ready_for_mining=true')
-    else:
-        print('ready=false')
-        print('ready_for_mining=false')
-
-asyncio.run(check_threshold())
-" >> $GITHUB_OUTPUT
+          python scripts/check_threshold.py >> $GITHUB_OUTPUT
           
       - name: Run Network Sentry
         if: steps.threshold_check.outputs.ready_for_mining == 'true'
@@ -68,8 +49,8 @@ asyncio.run(check_threshold())
           INFLUENCE_API_KEY: ${{ secrets.INFLUENCE_API_KEY }}
           SIGNER_PASSWORD: ${{ secrets.SIGNER_PASSWORD }}
         run: |
-          echo "🏭 Mining Threshold Reached - Starting Iron → Steel Refining"
-          python python-logic/orchestrator.py --strategy refining
+          echo "🏭 Mining Threshold Reached - Starting Full-Auto Iron → Steel Refining"
+          python main.py --full-auto
           
       - name: Run Pulse Check
         if: steps.threshold_check.outputs.ready_for_mining == 'false'

@@ -18,6 +18,7 @@ async def main():
     """Main CLI entry point"""
     parser = argparse.ArgumentParser(description="PyPro Systems - StarkNet Protocol Engine")
     parser.add_argument("--recover", action="store_true", help="Execute account recovery mission")
+    parser.add_argument("--full-auto", action="store_true", help="Execute Full-Auto recovery mission (requires SIGNER_PASSWORD env var)")
     parser.add_argument("--phantom-address", type=str, help="Phantom wallet address")
     parser.add_argument("--starknet-address", type=str, help="StarkNet wallet address")
     parser.add_argument("--status", action="store_true", help="Check recovery status")
@@ -36,6 +37,8 @@ async def main():
     
     if args.recover:
         await execute_recovery(args)
+    elif args.full_auto:
+        await execute_full_auto(args)
     elif args.status:
         await check_status()
     elif args.resume:
@@ -162,6 +165,41 @@ async def resume_recovery():
             
     except Exception as e:
         print(f"❌ Resume failed: {e}")
+
+async def execute_full_auto(args):
+    """Execute Full-Auto recovery mission"""
+    print("🚀 PyPro Systems - Full-Auto Recovery Mission")
+    print("=" * 60)
+    print("⚠️  WARNING: This will execute autonomously without human confirmation")
+    print("🔒 Requires SIGNER_PASSWORD environment variable")
+    print("=" * 60)
+    
+    # Get addresses
+    phantom_address = args.phantom_address or "0xbd5fdCDc18FA0B0764861996CC9482f0526EEDd9"
+    starknet_address = args.starknet_address or "0x05174a29cc99c36c124c85e17fab10c12c3a783e64f46c29f107b316ec4853a9"
+    
+    # Check if SIGNER_PASSWORD is set
+    if not os.getenv("SIGNER_PASSWORD"):
+        print("❌ SIGNER_PASSWORD environment variable not found")
+        print("   Full-Auto mode requires: export SIGNER_PASSWORD='your_password'")
+        return
+    
+    # Initialize kernel
+    kernel = RecoveryKernel(phantom_address, starknet_address)
+    
+    try:
+        success = await kernel.execute_full_auto()
+        
+        if success:
+            print("\n🎉 FULL-AUTO RECOVERY MISSION SUCCESSFUL!")
+            print("🏭 Iron → Steel refining loop initiated autonomously")
+        else:
+            print("\n❌ FULL-AUTO RECOVERY MISSION FAILED!")
+            
+    except Exception as e:
+        print(f"\n❌ Full-Auto mission error: {e}")
+    finally:
+        await kernel.shutdown()
 
 async def execute_stargate_watch(args):
     """Execute StarkGate watch mode"""

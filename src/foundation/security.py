@@ -55,6 +55,19 @@ class SecurityManager:
             self.is_unlocked = False
             return False
     
+    async def unlock_vault_auto(self) -> bool:
+        """Unlock the security vault using environment variable (Full-Auto mode)"""
+        # Check for password in environment first
+        password = os.getenv('SIGNER_PASSWORD')
+        
+        if not password:
+            print("❌ SIGNER_PASSWORD not found in environment")
+            print("   Full-Auto mode requires SIGNER_PASSWORD to be set")
+            return False
+        
+        print("🔓 Full-Auto mode: Using SIGNER_PASSWORD from environment")
+        return await self.unlock_vault(password)
+    
     def lock_vault(self) -> None:
         """Lock the security vault"""
         self.master_password = None

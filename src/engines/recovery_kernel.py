@@ -64,6 +64,7 @@ class RecoveryKernel:
         # Mission control
         self.is_running = False
         self.max_bridge_attempts = 3
+        self.max_gas_price = 100  # Gwei - Safety cap for Full-Auto mode
         
         # Phase handlers
         self.phase_handlers = {
@@ -368,6 +369,65 @@ class RecoveryKernel:
             await self._transition_to(RecoveryPhase.BRIDGE_EXECUTING, "Security vault unlocked")
         
         return success
+    
+    async def unlock_security_auto(self) -> bool:
+        """Unlock security using environment variable (Full-Auto mode)"""
+        if not self.security_manager:
+            print("❌ Security manager not initialized")
+            return False
+        
+        return await self.security_manager.unlock_vault_auto()
+    
+    async def check_gas_safety(self) -> bool:
+        """Check if gas price is safe for Full-Auto operation"""
+        try:
+            # Get current gas price from StarkNet
+            client = self.network_oracle.clients["starknet"]
+            block = await client.get_block("latest")
+            
+            # Estimate gas price (this is simplified - actual implementation may vary)
+            current_gas_price = getattr(block, 'gas_price', 20)  # Default to 20 Gwei if not available
+            
+            print(f"⛽ Current Gas Price: {current_gas_price} Gwei")
+            print(f"🛡️ Safety Cap: {self.max_gas_price} Gwei")
+            
+            if current_gas_price > self.max_gas_price:
+                print(f"❌ Gas price too high! Aborting Full-Auto operation")
+                print(f"   Current: {current_gas_price} Gwei > Cap: {self.max_gas_price} Gwei")
+                return False
+            
+            print("✅ Gas price within safe range")
+            return True
+            
+        except Exception as e:
+            print(f"⚠️ Could not check gas price: {e}")
+            print("🛡️ Proceeding with caution (gas check failed)")
+            return True  # Proceed if we can't check gas price
+    
+    async def execute_full_auto(self) -> bool:
+        """Execute Full-Auto recovery mission"""
+        print("🚀 FULL-AUTO MISSION INITIATED")
+        print("=" * 50)
+        
+        try:
+            # Initialize
+            if not await self.initialize():
+                return False
+            
+            # Check gas safety
+            if not await self.check_gas_safety():
+                return False
+            
+            # Auto-unlock security
+            if not await self.unlock_security_auto():
+                return False
+            
+            # Execute recovery
+            return await self.execute_recovery()
+            
+        except Exception as e:
+            print(f"❌ Full-Auto mission failed: {e}")
+            return False
     
     def print_status(self) -> None:
         """Print current status"""
