@@ -17,6 +17,7 @@ from ..foundation.network import NetworkOracle
 from ..foundation.state import StateRegistry, RecoveryState, BridgeStatus, AccountStatus
 from .bridge_system import BridgeSystem, ActivationSystem, MonitoringSystem
 from .enhanced_monitoring import EnhancedMonitoringSystem, AtomicBundle, MonitoringMode
+from .evolution_loop import EvolutionLoop, GenesisBundle, AgentState
 
 class RecoveryPhase(Enum):
     """Recovery phase states"""
