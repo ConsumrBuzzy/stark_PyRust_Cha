@@ -11,10 +11,10 @@ import time
 from rich.console import Console
 from rich.panel import Panel
 
-# Add python-logic to path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+# Add repo root to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from strategy_module import RefiningStrategy
+from src.ops.ghost_monitor import load_settings, balance_with_rotation, sweep_recommended
 
 console = Console()
 
@@ -29,94 +29,17 @@ def load_env():
 
 # ADR-047: Load environment IMMEDIATELY to populate global objects
 load_env()
+settings = load_settings()
 
 def get_ghost_address():
-    evm_addr = os.getenv("TRANSIT_EVM_ADDRESS")
-    if not evm_addr:
-        return None
-    
-    # Strip 0x
-    clean = evm_addr.lower().replace("0x", "")
-    # Pad to 64 chars (32 bytes)
-    ghost = "0x" + clean.zfill(64)
-    return ghost
+    return settings.ghost_address
 
-from starknet_py.net.full_node_client import FullNodeClient
-from starknet_py.net.models import StarknetChainId
 import asyncio
 
-from starknet_py.net.full_node_client import FullNodeClient
-from starknet_py.net.models import StarknetChainId
-from starknet_py.net.account.account import Account
-from starknet_py.net.signer.stark_curve_signer import KeyPair
-from starknet_py.hash.selector import get_selector_from_name
-from starknet_py.net.client_models import Call
-import asyncio
-
-class RPCManager:
-    def __init__(self):
-        self.urls = [
-            os.getenv("STARKNET_MAINNET_URL"),
-            os.getenv("STARKNET_LAVA_URL"),
-            os.getenv("STARKNET_1RPC_URL"),
-            os.getenv("STARKNET_ONFINALITY_URL")
-        ]
-        self.urls = [u for u in self.urls if u]
-        self.current_idx = 0
-        if not self.urls:
-            console.print("[bold red]❌ RPC Manager: No Starknet RPC URLs found in .env![/bold red]")
-        else:
-            console.print(f"[dim]📡 RPC Manager initialized with {len(self.urls)} providers.[/dim]")
-
-    def get_next_url(self):
-        if not self.urls: return None
-        url = self.urls[self.current_idx % len(self.urls)]
-        self.current_idx += 1
-        return url
-
-    async def call_with_rotation(self, func, *args, **kwargs):
-        """Executes a function with RPC rotation on failure."""
-        failed_this_cycle = []
-        for _ in range(len(self.urls) or 1):
-            url = self.get_next_url()
-            if not url or url in failed_this_cycle: 
-                continue
-            
-            client = FullNodeClient(node_url=url)
-            try:
-                # Use get_block_number as a simpler health check that often works on older RPCs
-                # though starknet-py 0.29 prefers 0.10.0+
-                console.print(f"[dim]Testing RPC: {url[:40]}...[/dim]")
-                await client.get_block_number()
-                return await func(client, *args, **kwargs)
-            except Exception as e:
-                err_msg = str(e).lower()
-                if "429" in err_msg or "too many requests" in err_msg:
-                    console.print(f"[yellow]⚠️ RPC Rate Limit ({url[:30]}...). Rotating...[/yellow]")
-                elif "version" in err_msg or "invalid params" in err_msg:
-                    console.print(f"[yellow]⚠️ RPC Incompatible ({url[:30]}...). Skipping...[/yellow]")
-                else:
-                    console.print(f"[yellow]⚠️ RPC Fail ({url[:30]}...): {e}. Rotating...[/yellow]")
-                failed_this_cycle.append(url)
-        
-        console.print("[bold red]❌ All RPC providers failed or incompatible.[/bold red]")
-        return None
-
-rpc_manager = RPCManager()
-
-async def _do_balance_check(client, address: str):
-    eth_address = "int(os.getenv("STARKNET_ETH_CONTRACT", "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"), 16)"
-    call = Call(
-        to_addr=int(eth_address, 16),
-        selector=get_selector_from_name("balanceOf"),
-        calldata=[int(address, 16)]
-    )
-    res = await client.call_contract(call)
-    return res[0] / 10**18
 
 async def check_starknet_balance(address: str):
-    bal = await rpc_manager.call_with_rotation(_do_balance_check, address)
-    return bal if bal is not None else 0.0
+    bal, rpc_used = await balance_with_rotation(address, settings.rpc_urls, settings.eth_contract)
+    return float(bal) if bal is not None else 0.0
 
 def find_funds():
     verbose = "--verbose" in sys.argv or "--direct-query" in sys.argv
@@ -186,7 +109,7 @@ async def execute_sweep(ghost_addr, target_addr, priv_key):
 
 def sweep_funds():
     ghost = get_ghost_address()
-    target = os.getenv("STARKNET_WALLET_ADDRESS")
+    target = settings.main_address
     priv_key = os.getenv("TRANSIT_EVM_PRIVATE_KEY")
     
     if not ghost or not target or not priv_key:
