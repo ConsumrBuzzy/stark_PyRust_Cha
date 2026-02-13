@@ -25,6 +25,8 @@ from starknet_py.net.full_node_client import FullNodeClient
 from starknet_py.net.signer.key_pair import KeyPair
 from starknet_py.hash.selector import get_selector_from_name
 from starknet_py.net.client_models import Call
+from web3 import Web3
+from web3.middleware import geth_poa_middleware
 
 # Import core components
 from core.factory import get_provider_factory
@@ -88,10 +90,31 @@ class AtomicActivationEngine:
         self.max_fee = int(0.02e18)  # 0.02 ETH max fee
         self.transfer_amount = int(0.001e18)  # 0.001 ETH initial transfer
         self.activation_threshold = 0.018  # ETH threshold for auto-trigger
+        self.bridge_amount = 0.009  # ETH to bridge from Base to StarkNet
         
         # Auto-trigger state
         self.master_password = None
         self.auto_trigger_enabled = False
+        
+        # Base network configuration
+        self.base_rpc_url = "https://mainnet.base.org"
+        self.base_web3 = Web3(Web3.HTTPProvider(self.base_rpc_url))
+        self.base_web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+        
+        # StarkGate bridge contract
+        self.starkgate_bridge_address = "0xae0Ee0A63A2cE6BaeEFFE56e7714FB4EFE48D419"
+        self.starkgate_bridge_abi = [
+            {
+                "inputs": [
+                    {"name": "amount", "type": "uint256"},
+                    {"name": "l2Recipient", "type": "uint256"}
+                ],
+                "name": "deposit",
+                "outputs": [],
+                "stateMutability": "payable",
+                "type": "function"
+            }
+        ]
         
         logger.info("⚛️ Atomic Activation Engine initialized")
     
