@@ -233,19 +233,14 @@ class AtomicActivationEngine:
         
         try:
             # Use Alchemy provider exclusively for reliability
-            provider_name, client = self.provider_factory.get_best_provider()
-            
-            # Force use Alchemy if available
             if "Alchemy" in self.provider_factory.providers:
-                # Get Alchemy client using the factory method
-                providers = self.provider_factory.providers
-                for name, config in providers.items():
-                    if name == "Alchemy":
-                        # Create client directly from config
-                        from starknet_py.net.full_node_client import FullNodeClient
-                        client = FullNodeClient(node_url=config.url)
-                        provider_name = name
-                        break
+                config = self.provider_factory.providers["Alchemy"]
+                from starknet_py.net.full_node_client import FullNodeClient
+                client = FullNodeClient(node_url=config.url)
+                provider_name = "Alchemy"
+            else:
+                # Fallback to best provider
+                provider_name, client = self.provider_factory.get_best_provider()
             
             # Check balance using call_contract
             from starknet_py.hash.selector import get_selector_from_name
@@ -269,7 +264,7 @@ class AtomicActivationEngine:
             }
             
         except Exception as e:
-            logger.error(f"❌ Balance check failed via Alchemy: {e}")
+            logger.error(f"❌ Balance check failed via {provider_name}: {e}")
             # NO FALLBACK - Return error status instead of fake balance
             return {
                 "balance": None, 
