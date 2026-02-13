@@ -72,6 +72,7 @@ def setup_encrypted_signer():
         return False
 
 if __name__ == "__main__":
+    console = Console()
     try:
         success = setup_encrypted_signer()
         if success:
