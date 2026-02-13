@@ -11,7 +11,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from src.ops.env import build_config
-from src.ops.network_checks import ensure_oracle, gas_is_safe
+from src.ops.network_checks import ensure_oracle, get_gas_price_gwei
 from src.foundation.state import StateRegistry
 from src.foundation.reporting import ReportingSystem
 
@@ -44,12 +44,10 @@ async def watchdog_log():
             recovery_state = await state_registry.load_state()
             
             # Check gas price
-            gas_price = await gas_is_safe(ceiling_gwei=config.gas_ceiling_gwei, oracle=oracle)
-            gas_price_value = await oracle.clients["starknet"].get_block("latest")
-            gas_price_value = getattr(gas_price_value, 'gas_price', 20)
+            gas_price_value = await get_gas_price_gwei(oracle=oracle)
             
             # Safety checks
-            gas_safe = gas_price
+            gas_safe = gas_price_value <= config.gas_ceiling_gwei
             threshold_met = float(starknet_balance) >= float(config.threshold_eth)
             
             print(f'⏰ {timestamp} | 💰 StarkNet: {starknet_balance:.6f} ETH | 👻 Phantom: {phantom_balance:.6f} ETH | ⛽ Gas: {gas_price_value} Gwei {"🟢" if gas_safe else "🔴"} | 🎯 {"READY" if threshold_met else "WAITING"}')
