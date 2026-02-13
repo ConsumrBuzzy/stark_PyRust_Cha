@@ -19,24 +19,15 @@ if env_path.exists():
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.foundation.reporting import ReportingSystem
+from src.ops.reporting_ops import send_yield_report
 
 async def yield_report():
-    reporting = ReportingSystem()
-    if reporting.is_enabled():
-        await reporting.telegram.send_alert(
-            '⛏️ STEEL_MILL_ACTIVE',
-            f'''Cycle 1 Complete!
-            
-🏭 Production: 100 Steel
-💰 ROI: +100 Steel
-⛽ Gas Used: ~20 Gwei
-⏰ Time: {asyncio.get_event_loop().time()}
-🎯 Status: CONTINUING AUTONOMOUS OPERATION
-
-The DuggerCore-Stark Engine is now running the Iron → Steel loop autonomously...'''
-        )
-        print('✅ Yield report sent to Telegram')
+    await send_yield_report(
+        production="100 Steel",
+        roi="+100 Steel",
+        gas_used="~20 Gwei",
+        event_time=asyncio.get_event_loop().time(),
+    )
 
 if __name__ == "__main__":
     asyncio.run(yield_report())
