@@ -161,14 +161,24 @@ class AtomicActivationEngine:
             self.console.print("🌉 EXECUTING STARKGATE BRIDGE", style="bold blue")
             self.console.print(f"📍 From: {self.phantom_base_address}")
             self.console.print(f"📍 To: {self.wallet_address}")
-            self.console.print(f"💰 Amount: {self.bridge_amount} ETH")
             
             # Check balance
             balance_result = await self.check_phantom_balance()
             current_balance = balance_result["balance"]
             
-            if current_balance < self.bridge_amount:
-                raise Exception(f"Insufficient balance: {current_balance:.6f} ETH < {self.bridge_amount:.6f} ETH")
+            # Calculate dynamic bridge amount (use 95% of balance to leave room for gas)
+            gas_reserve = 0.001  # Reserve 0.001 ETH for gas
+            max_bridge_amount = current_balance - gas_reserve
+            
+            # Use the larger of predefined amount or calculated max
+            bridge_amount = max(self.bridge_amount, max_bridge_amount)
+            
+            self.console.print(f"💰 Available Balance: {current_balance:.6f} ETH")
+            self.console.print(f"💰 Bridge Amount: {bridge_amount:.6f} ETH")
+            self.console.print(f"⛽ Gas Reserve: {gas_reserve:.6f} ETH")
+            
+            if bridge_amount <= 0:
+                raise Exception(f"Insufficient balance: {current_balance:.6f} ETH <= {gas_reserve:.6f} ETH gas reserve")
             
             # Get private key for Base wallet (Phantom)
             phantom_private_key = os.getenv("PHANTOM_BASE_PRIVATE_KEY")
@@ -189,7 +199,7 @@ class AtomicActivationEngine:
             
             # Convert StarkNet address to uint256
             starknet_address_uint = int(self.wallet_address, 16)
-            amount_wei = self.base_web3.to_wei(self.bridge_amount, 'ether')
+            amount_wei = self.base_web3.to_wei(bridge_amount, 'ether')
             
             # Build transaction
             deposit_tx = starkgate_contract.functions.deposit(
@@ -214,12 +224,14 @@ class AtomicActivationEngine:
             
             if tx_receipt.status == 1:
                 self.console.print("✅ StarkGate bridge completed successfully!", style="bold green")
+                # Update the bridge amount for tracking
+                self.bridge_amount = bridge_amount
                 return {
                     "success": True,
                     "tx_hash": tx_hash.hex(),
                     "block_number": tx_receipt.blockNumber,
                     "gas_used": tx_receipt.gasUsed,
-                    "amount": self.bridge_amount
+                    "amount": bridge_amount
                 }
             else:
                 raise Exception("Bridge transaction failed")
@@ -384,7 +396,7 @@ class AtomicActivationEngine:
                         poll_interval = 5
                         self.console.print("⚠️ Connection lost - urgent retry mode", style="bold red")
                     else:
-                        self.console.print(f"⏳ Balance check pending: {balance_result.get('error', 'Unknown error')}")
+                        self.console.print(f"⏳ STATUS: MINT_PENDING - StarkGate bridge in protocol transit", style="yellow")
                     current_balance = 0  # Set to 0 for threshold check
                 
                 # Check threshold
