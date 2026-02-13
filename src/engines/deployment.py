@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 from starknet_py.net.account.account import Account
 from starknet_py.net.full_node_client import FullNodeClient
@@ -45,6 +45,7 @@ class DeploymentEngine:
         class_hash: Optional[int] = None,
         salt: int = 0,
         resource_bounds: Optional[ResourceBoundsMapping] = None,
+        constructor_calldata: Optional[List[int]] = None,
     ) -> Dict[str, Any]:
         if not await self._ensure_init():
             return {"success": False, "error": "Initialization failed"}
@@ -82,6 +83,8 @@ class DeploymentEngine:
 
         bounds = resource_bounds or self._default_resource_bounds()
 
+        calldata = constructor_calldata or [key_pair.public_key]
+
         try:
             deploy_result = await Account.deploy_account_v3(
                 address=target_addr_int,
@@ -90,7 +93,7 @@ class DeploymentEngine:
                 key_pair=key_pair,
                 client=rpc_client,
                 resource_bounds=bounds,
-                constructor_calldata=[key_pair.public_key],
+                constructor_calldata=calldata,
             )
 
             return {
@@ -98,6 +101,7 @@ class DeploymentEngine:
                 "tx_hash": hex(deploy_result.hash),
                 "deployed_address": hex(target_addr_int),
                 "computed_address": hex(computed_address),
+                "constructor_calldata": calldata,
             }
         except Exception as e:
             return {"success": False, "error": str(e), "computed_address": hex(computed_address)}
