@@ -429,9 +429,8 @@ class AtomicActivationEngine:
                 result.execution_time = (datetime.now() - start_time).total_seconds()
                 return result
             
-            # Create key pair
-            private_key_int = int(self.private_key, 16)
-            key_pair = KeyPair.from_private_key(private_key_int)
+            # Get key pair from encrypted signer
+            keypair = self.signer.get_keypair()
             
             # Convert address to int
             address_int = int(self.wallet_address, 16)
@@ -622,7 +621,7 @@ This atomic execution follows the PhantomArbiter bundle submitter pattern:
         logger.info(f"📄 Atomic execution report saved: {report_file}")
 
 async def main():
-    """Main execution"""
+    """Main execution with auto-trigger capability"""
     
     import argparse
     
@@ -642,49 +641,65 @@ async def main():
         # Create engine
         engine = AtomicActivationEngine()
         
-        # Create atomic bundle
-        bundle = await engine.create_deployment_bundle()
-        
-        console.print(f"📦 Bundle created: {bundle.description}")
-        console.print(f"🔧 Operations: {len(bundle.operations)}")
-        console.print(f"⛽ Max Fee: {bundle.max_fee / 1e18:.6f} ETH")
-        
-        if args.simulate:
-            # Run simulation only
-            simulation = await engine.simulate_execution(bundle)
+        # Check if this is auto-trigger mode (no flags)
+        if not args.dry_run and not args.simulate:
+            # Auto-trigger mode - prompt for password
+            console.print("\n🚀 LIVE EXECUTION MODE - Auto-Trigger Protocol", style="bold green")
+            console.print("🎯 The system will automatically execute when balance ≥ 0.018 ETH")
             
-            console.print("\n📊 Simulation Results:")
-            console.print(f"• Deploy Cost: {simulation.get('deploy_cost', 0) / 1e18:.6f} ETH")
-            console.print(f"• Transfer Cost: {simulation.get('transfer_cost', 0) / 1e18:.6f} ETH")
-            console.print(f"• Total Cost: {simulation.get('total_cost', 0) / 1e18:.6f} ETH")
-            console.print(f"• Sufficient Fee: {'✅ Yes' if simulation.get('sufficient_fee') else '❌ No'}")
-            
-        else:
-            # Run simulation first
-            simulation = await engine.simulate_execution(bundle)
-            
-            if not simulation.get('sufficient_fee', False):
-                console.print("❌ Insufficient max fee for execution", style="bold red")
-                console.print(f"Required: {simulation.get('total_cost', 0) / 1e18:.6f} ETH")
-                console.print(f"Max Fee: {simulation.get('max_fee', 0) / 1e18:.6f} ETH")
+            # Prompt for master password
+            if not engine.prompt_master_password():
+                console.print("❌ Auto-trigger mode requires valid password", style="bold red")
                 return
             
-            # Execute atomic bundle
-            result = await engine.execute_atomic_bundle(bundle, dry_run=args.dry_run)
+            # Start auto-trigger monitoring
+            await engine.auto_trigger_monitor()
             
-            # Display results
-            panel = engine.create_execution_panel(result, simulation)
-            console.print(panel)
+        else:
+            # Simulation/dry-run mode
+            # Create atomic bundle
+            bundle = await engine.create_deployment_bundle()
             
-            # Save report
-            engine.save_execution_report(result, bundle, simulation)
+            console.print(f"📦 Bundle created: {bundle.description}")
+            console.print(f"🔧 Operations: {len(bundle.operations)}")
+            console.print(f"⛽ Max Fee: {bundle.max_fee / 1e18:.6f} ETH")
             
-            if result.status == ExecutionStatus.CONFIRMED:
-                console.print("\n🎉 ATOMIC EXECUTION SUCCESSFUL!", style="bold green")
-                console.print("💼 Account is now deployed and funded")
-            elif result.status == ExecutionStatus.FAILED:
-                console.print("\n❌ ATOMIC EXECUTION FAILED", style="bold red")
-                console.print("🔧 Check error message above")
+            if args.simulate:
+                # Run simulation only
+                simulation = await engine.simulate_execution(bundle)
+                
+                console.print("\n📊 Simulation Results:")
+                console.print(f"• Deploy Cost: {simulation.get('deploy_cost', 0) / 1e18:.6f} ETH")
+                console.print(f"• Transfer Cost: {simulation.get('transfer_cost', 0) / 1e18:.6f} ETH")
+                console.print(f"• Total Cost: {simulation.get('total_cost', 0) / 1e18:.6f} ETH")
+                console.print(f"• Sufficient Fee: {'✅ Yes' if simulation.get('sufficient_fee') else '❌ No'}")
+                
+            else:
+                # Dry run mode
+                simulation = await engine.simulate_execution(bundle)
+                
+                if not simulation.get('sufficient_fee', False):
+                    console.print("❌ Insufficient max fee for execution", style="bold red")
+                    console.print(f"Required: {simulation.get('total_cost', 0) / 1e18:.6f} ETH")
+                    console.print(f"Max Fee: {simulation.get('max_fee', 0) / 1e18:.6f} ETH")
+                    return
+                
+                # Execute atomic bundle (dry run)
+                result = await engine.execute_atomic_bundle(bundle, dry_run=args.dry_run)
+                
+                # Display results
+                panel = engine.create_execution_panel(result, simulation)
+                console.print(panel)
+                
+                # Save report
+                engine.save_execution_report(result, bundle, simulation)
+                
+                if result.status == ExecutionStatus.CONFIRMED:
+                    console.print("\n🎉 ATOMIC EXECUTION SUCCESSFUL!", style="bold green")
+                    console.print("💼 Account is now deployed and funded")
+                elif result.status == ExecutionStatus.FAILED:
+                    console.print("\n❌ ATOMIC EXECUTION FAILED", style="bold red")
+                    console.print("🔧 Check error message above")
         
     except Exception as e:
         console.print(f"❌ Fatal error: {e}", style="bold red")
