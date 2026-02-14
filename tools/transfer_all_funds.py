@@ -5,6 +5,7 @@ Transfer all StarkNet funds back to Phantom wallet
 
 import os
 import sys
+import asyncio
 from pathlib import Path
 
 # Add src to path
