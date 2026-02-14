@@ -162,7 +162,7 @@ class AccountActivator:
                 }
             )
             
-            deploy_result = type('DeployResult', (), {'hash': int(result['transaction_hash'], 16)})()
+            deploy_result = type('DeployResult', (), {'hash': int(result['transaction_hash'], 16), 'wait_for_acceptance': lambda: None})()
 
             self.console.print(f"✅ Activation Broadcast: {hex(deploy_result.hash)}")
             self.console.print("⏳ Waiting for transaction acceptance...")
