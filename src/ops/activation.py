@@ -26,13 +26,15 @@ class AccountActivator:
         # Account configuration
         self.wallet_address = os.getenv("STARKNET_WALLET_ADDRESS")
         self.private_key = os.getenv("STARKNET_PRIVATE_KEY")
-        self.rpc_candidates = [
+        rpc_urls = [
             os.getenv("STARKNET_MAINNET_URL"),
-            os.getenv("STARKNET_RPC_URL"),
-            os.getenv("STARKNET_LAVA_URL"),
-            os.getenv("STARKNET_1RPC_URL"),
+            os.getenv("STARKNET_ALCHEMY_URL"),
             os.getenv("STARKNET_ONFINALITY_URL"),
-            "https://starknet-mainnet.public.blastapi.io",
+            os.getenv("STARKNET_RPC_URL"),
+            "https://starknet-mainnet.g.alchemy.com/starknet/v2/demo",  # Current Mainnet
+            "https://starknet-mainnet.public.blastapi.io",  # Current Mainnet
+        ]
+        self.rpc_candidates = rpc_urls + [
             "https://1rpc.io/starknet",
             "https://starknet.api.onfinality.io/public",
         ]
