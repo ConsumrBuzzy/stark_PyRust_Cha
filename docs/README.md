@@ -11,6 +11,9 @@
 ### **📄 Full Situation Report**
 **See**: [STARKNET_FUNDS_LOCKED_SITUATION.md](STARKNET_FUNDS_LOCKED_SITUATION.md)
 
+### **🔍 Post Mortem Analysis**
+**See**: [POST_MORTEM_ANALYSIS.md](POST_MORTEM_ANALYSIS.md)
+
 ---
 
 ## 📚 **Documentation Index**
