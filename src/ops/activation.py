@@ -117,7 +117,7 @@ class AccountActivator:
                 address=address_int,
                 client=client,
                 key_pair=key_pair,
-                chain=StarknetChainId.STARKNET_MAINNET,
+                chain=StarknetChainId.MAINNET,
             )
             
             # Deploy the account
