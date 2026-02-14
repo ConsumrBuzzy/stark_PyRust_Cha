@@ -52,15 +52,15 @@ async def deploy_account():
                 "resource_bounds": {
                     "l1_gas": {
                         "max_amount": "0x2710",
-                        "max_price_per_unit": "0x26b144c3e08c"
+                        "max_price_per_unit": "0x59682f00"
                     },
                     "l1_data_gas": {
                         "max_amount": "0x2710",
-                        "max_price_per_unit": "0x26b144c3e08c"
+                        "max_price_per_unit": "0x59682f00"
                     },
                     "l2_gas": {
                         "max_amount": "0x88b80",
-                        "max_price_per_unit": "0x2540be400"
+                        "max_price_per_unit": "0x59682f00"
                     }
                 },
                 "tip": "0x0",
