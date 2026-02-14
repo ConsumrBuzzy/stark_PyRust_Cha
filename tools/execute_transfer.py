@@ -63,7 +63,7 @@ async def execute_transfer():
         print(f"💸 Transfer Amount: {transfer_eth:.6f} ETH")
         
         # Connect to RPC
-        client = FullNodeClient(node_url="https://1rpc.io/starknet")
+        client = FullNodeClient(node_url="https://starknet.drpc.org")
         
         # Create account
         private_key_int = int(private_key, 16)
