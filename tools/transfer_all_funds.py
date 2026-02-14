@@ -10,8 +10,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from ops.audit_ops import AuditOps
-from core.ui.rich_dashboard import RichDashboard
+from src.ops.audit_ops import run_audit
 
 def transfer_to_phantom():
     """Transfer all funds to Phantom wallet"""
