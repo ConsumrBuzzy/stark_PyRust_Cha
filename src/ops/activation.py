@@ -120,7 +120,6 @@ class AccountActivator:
                 client=client,
                 constructor_calldata=[key_pair.public_key, 0],
                 max_fee=int(0.01e18),
-                version=1,
             )
 
             self.console.print(f"✅ Activation Broadcast: {hex(deploy_result.hash)}")
