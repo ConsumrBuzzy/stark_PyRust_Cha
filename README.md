@@ -1,6 +1,8 @@
 # StarkNet Shadow Protocol
 
-A comprehensive StarkNet account management and deployment system.
+> **🚨 CRITICAL**: Project Retired - $63 USD Loss | [Post Mortem Analysis](docs/POST_MORTEM_ANALYSIS.md) | [Situation Report](docs/STARKNET_FUNDS_LOCKED_SITUATION.md)
+
+A comprehensive StarkNet account management and deployment system demonstrating blockchain deployment economics, failure analysis, and professional post-mortem documentation.
 
 ## 🚨 **CRITICAL SITUATION**
 
@@ -15,9 +17,13 @@ A comprehensive StarkNet account management and deployment system.
 - **Retirement**: Project retired, open to community fork
 - **Legacy**: Complete failure analysis for community learning
 
-### **See Documentation**
-📄 **Full Situation Report**: [docs/STARKNET_FUNDS_LOCKED_SITUATION.md](docs/STARKNET_FUNDS_LOCKED_SITUATION.md)
-🔍 **Post Mortem Analysis**: [docs/POST_MORTEM_ANALYSIS.md](docs/POST_MORTEM_ANALYSIS.md)
+### **📚 Documentation**
+📄 **[Situation Report](docs/STARKNET_FUNDS_LOCKED_SITUATION.md)** - Complete incident analysis
+🔍 **[Post Mortem Analysis](docs/POST_MORTEM_ANALYSIS.md)** - Industry-standard failure analysis
+📖 **[Architecture](docs/ARCHITECTURE.md)** - System design and components
+📋 **[Contributing](CONTRIBUTING.md)** - Development guidelines
+🔒 **[Security](SECURITY.md)** - Security practices
+🧪 **[Testing](TESTING.md)** - Testing framework
 
 ---
 
@@ -32,7 +38,7 @@ Public/portfolio-ready refactor with Python 3.12 + Rust (PyO3) engines. Legacy `
   - `onramp.py`: Coinbase onramp via CCXT.
   - `gas_refuel.py`: AVNU ETH→STRK swap with dry-run support.
 
-## 🔍 **Keywords**
+## 🔍 **Keywords & Tags**
 - **StarkNet**: Layer 2 scaling solution for Ethereum
 - **Account Deployment**: Smart contract deployment on blockchain
 - **Gas Price**: Transaction fee calculation and optimization
@@ -41,11 +47,15 @@ Public/portfolio-ready refactor with Python 3.12 + Rust (PyO3) engines. Legacy `
 - **Python**: Primary programming language
 - **Rust**: Systems programming integration
 - **Portfolio**: Professional project showcase
-- **Post Mortem**: Failure analysis and learning
+- **Post Mortem**: Industry-standard failure analysis
 - **Open Source**: Community-driven development
-- **Portfolio**: Professional project showcase with failure analysis
-- **Post Mortem**: Complete industry-standard failure documentation
-- **Learning**: Comprehensive blockchain deployment economics understanding
+- **Failure Analysis**: Technical and economic debugging
+- **Blockchain Economics**: Gas price volatility impact
+- **Smart Contract**: Deployment strategies and costs
+- **Layer 2**: Ethereum scaling solutions
+- **DeFi**: Decentralized finance applications
+- **RPC**: Remote procedure call optimization
+- **Gas Optimization**: Fee reduction strategies
 - `src/core/ui/`
   - `dashboard.py`: Rich TUI dashboard (header/body/footer, logs, ROI).
 - `src/foundation/`
