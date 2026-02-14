@@ -40,7 +40,7 @@ def transfer_to_phantom():
             main_address=starknet_address
         ))
         
-        balance_eth = result.main_balance_eth
+        balance_eth = float(result.main_balance_eth)
         print(f"💰 Current Balance: {balance_eth:.6f} ETH")
         
         if balance_eth < 0.001:
