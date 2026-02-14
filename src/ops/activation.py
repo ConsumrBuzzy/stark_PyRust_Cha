@@ -131,6 +131,7 @@ class AccountActivator:
             
             # Sign with private key
             signature = message_signature(tx_hash, key_pair.private_key)
+            print(f"Debug: Signature = {signature}, type = {type(signature)}")
             
             # Create deploy transaction
             deploy_tx = DeployAccountV1(
