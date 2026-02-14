@@ -146,6 +146,7 @@ class AccountActivator:
             
             # Send deployment using raw RPC call
             deploy_params = {
+                "type": "DEPLOY_ACCOUNT",
                 "class_hash": hex(self.argent_proxy_hash),
                 "contract_address_salt": hex(0),
                 "constructor_calldata": [hex(key_pair.public_key), "0x0"],
