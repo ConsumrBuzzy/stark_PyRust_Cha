@@ -147,7 +147,6 @@ class AccountActivator:
             # Send deployment using raw RPC call
             deploy_params = {
                 "type": "DEPLOY_ACCOUNT",
-                "version": hex(0),
                 "nonce": hex(0),
                 "max_fee": hex(int(0.01e18)),
                 "signature": [hex(s) for s in signature],
