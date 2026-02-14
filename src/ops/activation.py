@@ -157,9 +157,10 @@ class AccountActivator:
             
             # Use raw RPC call
             try:
-                result = await client._client.request(
-                    "starknet_addDeployAccountTransaction",
-                    {
+                print(f"Debug: Deploy params = {deploy_params}")
+                result = await client._client.call(
+                    method="starknet_addDeployAccountTransaction",
+                    params={
                         "deploy_account_transaction": deploy_params
                     }
                 )
