@@ -143,8 +143,19 @@ class AccountActivator:
                 signature=signature,
             )
             
-            # Send deployment
-            deploy_result = await client.deploy_account(deploy_tx)
+            # Send deployment with max_fee in params
+            deploy_params = {
+                "type": "DEPLOY_ACCOUNT",
+                "version": 1,
+                "max_fee": hex(int(0.01e18)),
+                "signature": [hex(s) for s in signature],
+                "nonce": hex(0),
+                "contract_address_salt": hex(0),
+                "constructor_calldata": [hex(key_pair.public_key), "0x0"],
+                "class_hash": hex(self.argent_proxy_hash),
+            }
+            
+            deploy_result = await client.deploy_account(deploy_params)
 
             self.console.print(f"✅ Activation Broadcast: {hex(deploy_result.hash)}")
             self.console.print("⏳ Waiting for transaction acceptance...")
