@@ -109,6 +109,7 @@ async def deploy_account():
         
         # Compute transaction hash
         tx_hash = compute_deploy_account_transaction_hash(
+            contract_address=address_int,
             class_hash=class_hash,
             salt=0,
             constructor_calldata=[key_pair.public_key, 0],
