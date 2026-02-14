@@ -147,13 +147,13 @@ class AccountActivator:
             # Send deployment using raw RPC call
             deploy_params = {
                 "type": "DEPLOY_ACCOUNT",
+                "version": hex(1),
+                "nonce": hex(0),
+                "max_fee": hex(int(0.01e18)),
+                "signature": [hex(s) for s in signature],
                 "class_hash": hex(self.argent_proxy_hash),
                 "contract_address_salt": hex(0),
                 "constructor_calldata": [hex(key_pair.public_key), "0x0"],
-                "max_fee": hex(int(0.01e18)),
-                "nonce": hex(0),
-                "signature": [hex(s) for s in signature],
-                "version": 1,
             }
             
             # Use raw HTTP request
