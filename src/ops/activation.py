@@ -155,16 +155,12 @@ class AccountActivator:
                 "version": 1,
             }
             
-            # Use the deploy_account method with proper format
+            # Use raw HTTP request
             try:
-                print(f"Debug: Attempting deployment with params...")
-                # Create a simple deploy account call
-                result = await client.deploy_account(deploy_tx)
-                print(f"Debug: Deploy result = {result}")
-            except Exception as rpc_error:
-                print(f"RPC Error: {rpc_error}")
-                # Try with a different approach
+                print(f"Debug: Attempting raw HTTP request...")
                 import json
+                import aiohttp
+                
                 payload = {
                     "jsonrpc": "2.0",
                     "method": "starknet_addDeployAccountTransaction",
@@ -173,7 +169,24 @@ class AccountActivator:
                     },
                     "id": 1
                 }
-                print(f"Debug: Raw payload = {json.dumps(payload, indent=2)}")
+                
+                headers = {"Content-Type": "application/json"}
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        client._client.url,
+                        headers=headers,
+                        data=json.dumps(payload)
+                    ) as response:
+                        result = await response.json()
+                        print(f"Debug: Raw response = {result}")
+                        
+                        if 'error' in result:
+                            raise Exception(f"RPC Error: {result['error']}")
+                        
+                        tx_hash = int(result['result']['transaction_hash'], 16)
+                        
+            except Exception as rpc_error:
+                print(f"HTTP Error: {rpc_error}")
                 raise
             
             print(f"Debug: Result = {result}")
