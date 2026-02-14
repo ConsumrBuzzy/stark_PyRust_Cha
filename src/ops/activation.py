@@ -162,7 +162,17 @@ class AccountActivator:
                 }
             )
             
-            deploy_result = type('DeployResult', (), {'hash': int(result['transaction_hash'], 16), 'wait_for_acceptance': lambda: None})()
+            print(f"Debug: Result = {result}")
+            
+            # Extract transaction hash from response
+            if 'transaction_hash' in result:
+                tx_hash = int(result['transaction_hash'], 16)
+            elif 'result' in result and 'transaction_hash' in result['result']:
+                tx_hash = int(result['result']['transaction_hash'], 16)
+            else:
+                raise Exception(f"Cannot find transaction hash in response: {result}")
+            
+            deploy_result = type('DeployResult', (), {'hash': tx_hash, 'wait_for_acceptance': lambda: None})()
 
             self.console.print(f"✅ Activation Broadcast: {hex(deploy_result.hash)}")
             self.console.print("⏳ Waiting for transaction acceptance...")
