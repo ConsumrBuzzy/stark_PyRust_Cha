@@ -24,6 +24,7 @@ A comprehensive StarkNet account management and deployment system demonstrating 
 📋 **[Contributing](CONTRIBUTING.md)** - Development guidelines
 🔒 **[Security](SECURITY.md)** - Security practices
 🧪 **[Testing](TESTING.md)** - Testing framework
+🔍 **[SEO Optimization](docs/SEARCH_ENGINE_OPTIMIZATION.md)** - Search engine optimization guide
 
 ---
 
