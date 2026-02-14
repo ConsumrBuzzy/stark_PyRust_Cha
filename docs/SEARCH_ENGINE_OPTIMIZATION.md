@@ -127,6 +127,10 @@ Check [Contributing](CONTRIBUTING.md) for development guidelines
 - **Pull Requests**: Code contributions
 - **Wiki**: Additional documentation
 
+### **Direct Contact**
+- **Email**: cheater2478@gmail.com
+- **Services**: rfditservices@gmail.com
+
 ---
 
 ## 📈 **Metrics & Tracking**

@@ -189,6 +189,10 @@ deploy_account_transaction = {
 - **Braavos**: Support team
 - **Ready.co**: Technical assistance
 
+### **Direct Contact**
+- **Email**: cheater2478@gmail.com
+- **Services**: rfditservices@gmail.com
+
 ---
 
 ## 📈 **Success Metrics**

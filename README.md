@@ -57,6 +57,10 @@ Public/portfolio-ready refactor with Python 3.12 + Rust (PyO3) engines. Legacy `
 - **DeFi**: Decentralized finance applications
 - **RPC**: Remote procedure call optimization
 - **Gas Optimization**: Fee reduction strategies
+
+## 📞 **Contact Information**
+- **Email**: cheater2478@gmail.com
+- **Services**: rfditservices@gmail.com
 - `src/core/ui/`
   - `dashboard.py`: Rich TUI dashboard (header/body/footer, logs, ROI).
 - `src/foundation/`

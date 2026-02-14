@@ -309,6 +309,10 @@ Funds Received → Undeployed Account → Cannot Send Transactions → Funds Loc
 - **Bridge Providers**: Recovery assistance
 - **Community**: Knowledge sharing
 
+### **Direct Contact**
+- **Email**: cheater2478@gmail.com
+- **Services**: rfditservices@gmail.com
+
 ---
 
 ## 🍽 **Project Retirement & Fork Information**
