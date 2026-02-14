@@ -32,43 +32,39 @@ def transfer_to_phantom():
     print(f"📍 To: {phantom_address}")
     
     # Get current balance using audit tool
-    audit = AuditOps()
-    dashboard = RichDashboard()
-    
     try:
-        # Get balance
-        balances = audit.check_balances()
+        # Run audit to get balance
+        result = asyncio.run(run_audit(
+            ghost_address="0x000000000000000000000000ff01e0776369ce51debb16dfb70f23c16d875463",
+            main_address=starknet_address
+        ))
         
-        if starknet_address in balances:
-            balance_eth = balances[starknet_address]['balance']
-            print(f"💰 Current Balance: {balance_eth:.6f} ETH")
-            
-            if balance_eth < 0.001:
-                print("❌ Balance too low for transfer")
-                return False
-            
-            # Calculate transfer amount (leave small amount for gas)
-            transfer_amount = balance_eth - 0.001  # Leave 0.001 ETH for gas
-            print(f"💸 Transfer Amount: {transfer_amount:.6f} ETH")
-            
-            # Create transfer instructions
-            print(f"\n🔧 Transfer Instructions:")
-            print(f"1. Go to Ready.co: https://web.ready.co/")
-            print(f"2. Import private key: 0632d8e811cb6524d0f9381cd19ff4e809b3402fa79237261ac1f2e2cc2a4f31")
-            print(f"3. Send {transfer_amount:.6f} ETH to: {phantom_address}")
-            print(f"4. Keep 0.001 ETH for gas fees")
-            
-            # Alternative: Bridge instructions
-            print(f"\n🌉 Alternative - Bridge to Base:")
-            print(f"1. Use Rhino.fi: https://rhino.fi/")
-            print(f"2. Bridge from StarkNet to Base")
-            print(f"3. Send to: {phantom_address}")
-            
-            return True
-        else:
-            print(f"❌ Address not found in audit")
+        balance_eth = result.main_balance_eth
+        print(f"💰 Current Balance: {balance_eth:.6f} ETH")
+        
+        if balance_eth < 0.001:
+            print("❌ Balance too low for transfer")
             return False
-            
+        
+        # Calculate transfer amount (leave small amount for gas)
+        transfer_amount = balance_eth - 0.001  # Leave 0.001 ETH for gas
+        print(f"💸 Transfer Amount: {transfer_amount:.6f} ETH")
+        
+        # Create transfer instructions
+        print(f"\n🔧 Transfer Instructions:")
+        print(f"1. Go to Ready.co: https://web.ready.co/")
+        print(f"2. Import private key: 0632d8e811cb6524d0f9381cd19ff4e809b3402fa79237261ac1f2e2cc2a4f31")
+        print(f"3. Send {transfer_amount:.6f} ETH to: {phantom_address}")
+        print(f"4. Keep 0.001 ETH for gas fees")
+        
+        # Alternative: Bridge instructions
+        print(f"\n🌉 Alternative - Bridge to Base:")
+        print(f"1. Use Rhino.fi: https://rhino.fi/")
+        print(f"2. Bridge from StarkNet to Base")
+        print(f"3. Send to: {phantom_address}")
+        
+        return True
+        
     except Exception as e:
         print(f"❌ Error: {e}")
         return False
