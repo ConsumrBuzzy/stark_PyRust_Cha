@@ -8,14 +8,19 @@
 - **Root Cause**: Account deployment requires ~24 ETH in gas fees
 - **Current Balance**: Insufficient for deployment
 
-### **� Documentation**
-📄 **[Situation Report](docs/STARKNET_FUNDS_LOCKED_SITUATION.md)** - Complete incident analysis
-🔍 **[Post Mortem Analysis](docs/POST_MORTEM_ANALYSIS.md)** - Industry-standard failure analysis
-📖 **[Architecture](docs/ARCHITECTURE.md)** - System design and components
-📋 **[Contributing](CONTRIBUTING.md)** - Development guidelines
-🔒 **[Security](SECURITY.md)** - Security practices
-🧪 **[Testing](TESTING.md)** - Testing framework
-🔍 **[SEO Optimization](docs/SEARCH_ENGINE_OPTIMIZATION.md)** - Search engine optimization guide
+### **📚 Documentation**
+📄 **[Situation Report](STARKNET_FUNDS_LOCKED_SITUATION.md)** - Complete incident analysis
+🔍 **[Post Mortem Analysis](POST_MORTEM_ANALYSIS.md)** - Industry-standard failure analysis
+📖 **[Architecture](../ARCHITECTURE.md)** - System design and components
+📋 **[Contributing](../CONTRIBUTING.md)** - Development guidelines
+🔒 **[Security](../SECURITY.md)** - Security practices
+🧪 **[Testing](../TESTING.md)** - Testing framework
+🔍 **[SEO Optimization](SEARCH_ENGINE_OPTIMIZATION.md)** - Search engine optimization guide
+
+### **Technical Documentation**
+- [ADR-027-Framework-Consolidation](adr/ADR-027-Framework-Consolidation.md) - Framework decisions
+- [ADR-029_Mainnet_Launch](adr/ADR-029_Mainnet_Launch.md) - Mainnet deployment
+- [ADR-031_Ghost_Scanner](adr/ADR-031_Ghost_Scanner.md) - Ghost wallet scanning
 
 
 ### **Plans & Reports**
