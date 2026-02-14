@@ -27,8 +27,8 @@ async def deploy_account():
     print(f"📍 Address: {wallet_address}")
     print(f"💰 Balance: 0.014863 ETH")
     
-    # Try working Alchemy endpoint
-    rpc_url = "https://starknet-mainnet.g.alchemy.com/v2/demo"
+    # Try working public endpoint
+    rpc_url = "https://starknet-mainnet.public.blastapi.io"
     
     # CORRECT: params is an ARRAY, not an object
     payload = {
@@ -76,7 +76,7 @@ async def deploy_account():
         print(f"🔥 Deploying to: {rpc_url}")
         print(f"📋 Using correct params array format")
         
-        headers = {"Content-Type": "application/json"}
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 rpc_url,
