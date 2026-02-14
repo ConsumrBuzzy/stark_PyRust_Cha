@@ -112,24 +112,39 @@ class AccountActivator:
             # Real activation
             self.console.print("🔥 Attempting account activation...")
 
-            # Create account instance first
-            account = Account(
-                address=address_int,
-                client=client,
-                key_pair=key_pair,
-                chain=StarknetChainId.MAINNET,
+            # Create deploy account transaction directly
+            from starknet_py.net.models import DeployAccountV1
+            from starknet_py.hash.transaction import compute_deploy_account_transaction_hash
+            from starknet_py.hash.utils import message_signature
+            
+            # Compute transaction hash
+            tx_hash = compute_deploy_account_transaction_hash(
+                contract_address=address_int,
+                class_hash=self.argent_proxy_hash,
+                salt=0,
+                constructor_calldata=[key_pair.public_key, 0],
+                max_fee=int(0.01e18),
+                version=1,
+                nonce=0,
+                chain_id=0x534e5f4d41494e4e4554,  # SN_MAINNET
             )
             
-            # Deploy the account
-            deploy_result = await account.sign_deploy_transaction(
+            # Sign with private key
+            signature = message_signature(tx_hash, key_pair.private_key)
+            
+            # Create deploy transaction
+            deploy_tx = DeployAccountV1(
                 class_hash=self.argent_proxy_hash,
                 contract_address_salt=0,
                 constructor_calldata=[key_pair.public_key, 0],
                 max_fee=int(0.01e18),
+                version=1,
+                nonce=0,
+                signature=signature,
             )
             
-            # Execute deployment
-            deploy_result = await client.send_transaction(deploy_result)
+            # Send deployment
+            deploy_result = await client.deploy_account(deploy_tx)
 
             self.console.print(f"✅ Activation Broadcast: {hex(deploy_result.hash)}")
             self.console.print("⏳ Waiting for transaction acceptance...")
