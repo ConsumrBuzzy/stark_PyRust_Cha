@@ -31,10 +31,21 @@ Public/portfolio-ready refactor with Python 3.12 + Rust (PyO3) engines. Legacy `
   - `rescue.py`: Forced transfers and deployment helper.
   - `onramp.py`: Coinbase onramp via CCXT.
   - `gas_refuel.py`: AVNU ETH→STRK swap with dry-run support.
-  - `search.py`: Address/class-hash/salt search utilities.
-  - `influence.py`: Core influence strategy.
-  - `bridge_system.py`: Bridge systems + `OrbiterBridgeAdapter`.
-  - `cdp_chaser.py`: Coinbase CDP gasless USDC chaser.
+
+## 🔍 **Keywords**
+- **StarkNet**: Layer 2 scaling solution for Ethereum
+- **Account Deployment**: Smart contract deployment on blockchain
+- **Gas Price**: Transaction fee calculation and optimization
+- **Blockchain**: Distributed ledger technology
+- **Web3**: Decentralized application development
+- **Python**: Primary programming language
+- **Rust**: Systems programming integration
+- **Portfolio**: Professional project showcase
+- **Post Mortem**: Failure analysis and learning
+- **Open Source**: Community-driven development
+- **Portfolio**: Professional project showcase with failure analysis
+- **Post Mortem**: Complete industry-standard failure documentation
+- **Learning**: Comprehensive blockchain deployment economics understanding
 - `src/core/ui/`
   - `dashboard.py`: Rich TUI dashboard (header/body/footer, logs, ROI).
 - `src/foundation/`
