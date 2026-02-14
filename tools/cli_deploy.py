@@ -39,12 +39,21 @@ async def deploy_account_cli():
         from starknet_py.net.signer.key_pair import KeyPair
         from starknet_py.hash.address import compute_address
         from starknet_py.net.account.account import Account
+        from starknet_py.net.client_models import Call
+        from starknet_py.hash.selector import get_selector_from_name
         
         # Try multiple RPCs
         rpc_urls = [
             "https://starknet-mainnet.public.blastapi.io",
             "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_10/demo",
             "https://starknet.rpc.lava.build",
+            "https://starknet.api.onfinality.io/public",
+            "https://1rpc.io/starknet",
+            "https://rpc.starknet.lava.build:443",
+            "https://starknet-mainnet.public.blastapi.io/rpc/v0_6",
+            "https://starknet-goerli.public.blastapi.io",
+            "https://starknet-mainnet.g.alchemy.com/v2/demo",
+            "https://starknet-mainnet.infura.io/v3/demo",
         ]
         
         client = None
