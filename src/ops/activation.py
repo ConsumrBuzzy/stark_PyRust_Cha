@@ -155,17 +155,25 @@ class AccountActivator:
                 "version": 1,
             }
             
-            # Use raw RPC call
+            # Use the deploy_account method with proper format
             try:
-                print(f"Debug: Deploy params = {deploy_params}")
-                result = await client._client.request(
-                    "starknet_addDeployAccountTransaction",
-                    {
-                        "deploy_account_transaction": deploy_params
-                    }
-                )
+                print(f"Debug: Attempting deployment with params...")
+                # Create a simple deploy account call
+                result = await client.deploy_account(deploy_tx)
+                print(f"Debug: Deploy result = {result}")
             except Exception as rpc_error:
                 print(f"RPC Error: {rpc_error}")
+                # Try with a different approach
+                import json
+                payload = {
+                    "jsonrpc": "2.0",
+                    "method": "starknet_addDeployAccountTransaction",
+                    "params": {
+                        "deploy_account_transaction": deploy_params
+                    },
+                    "id": 1
+                }
+                print(f"Debug: Raw payload = {json.dumps(payload, indent=2)}")
                 raise
             
             print(f"Debug: Result = {result}")
