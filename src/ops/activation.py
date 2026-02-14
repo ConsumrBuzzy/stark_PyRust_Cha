@@ -155,12 +155,16 @@ class AccountActivator:
             }
             
             # Use raw RPC call
-            result = await client._client.request(
-                "starknet_addDeployAccountTransaction",
-                {
-                    "deploy_account_transaction": deploy_params
-                }
-            )
+            try:
+                result = await client._client.request(
+                    "starknet_addDeployAccountTransaction",
+                    {
+                        "deploy_account_transaction": deploy_params
+                    }
+                )
+            except Exception as rpc_error:
+                print(f"RPC Error: {rpc_error}")
+                raise
             
             print(f"Debug: Result = {result}")
             
