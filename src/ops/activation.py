@@ -155,9 +155,9 @@ class AccountActivator:
             }
             
             # Use raw RPC call
-            result = await client._client.call(
-                method="starknet_addDeployAccountTransaction",
-                params={
+            result = await client._client.request(
+                "starknet_addDeployAccountTransaction",
+                {
                     "deploy_account_transaction": deploy_params
                 }
             )
