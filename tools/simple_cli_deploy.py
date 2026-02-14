@@ -134,8 +134,8 @@ async def deploy_account():
         
         print("🔥 Deploying account...")
         
-        # Send transaction
-        response = await client.send_transaction(deploy_tx)
+        # Send deployment transaction
+        response = await client.deploy_account(deploy_tx)
         tx_hash = response.transaction_hash
         
         print(f"✅ Transaction: {hex(tx_hash)}")
