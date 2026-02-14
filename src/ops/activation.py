@@ -150,7 +150,7 @@ class AccountActivator:
                 "constructor_calldata": [hex(key_pair.public_key), "0x0"],
                 "max_fee": hex(int(0.01e18)),
                 "nonce": hex(0),
-                "signature": [hex(s) for s in signature],
+                "signature": signature,
                 "version": 1,
             }
             
