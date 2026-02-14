@@ -112,7 +112,7 @@ class AccountActivator:
             # Real activation
             self.console.print("🔥 Attempting account activation...")
 
-            deploy_result = await Account.deploy_account_v3(
+            deploy_result = await Account.deploy_account(
                 address=address_int,
                 class_hash=self.argent_proxy_hash,
                 salt=0,
