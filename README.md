@@ -61,6 +61,7 @@ Public/portfolio-ready refactor with Python 3.12 + Rust (PyO3) engines. Legacy `
 ## 📞 **Contact Information**
 - **Email**: cheater2478@gmail.com
 - **Services**: rfditservices@gmail.com
+- **Professional**: robert.d@consumrbuzz.com
 - `src/core/ui/`
   - `dashboard.py`: Rich TUI dashboard (header/body/footer, logs, ROI).
 - `src/foundation/`
