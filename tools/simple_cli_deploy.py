@@ -103,8 +103,24 @@ async def deploy_account():
             signature=[],
         )
         
-        # Sign transaction
-        signature = key_pair.sign(deploy_tx.hash)
+        # Sign transaction using private key directly
+        from starknet_py.hash.transaction import compute_deploy_account_transaction_hash
+        from starknet_py.hash.utils import message_signature
+        
+        # Compute transaction hash
+        tx_hash = compute_deploy_account_transaction_hash(
+            class_hash=class_hash,
+            contract_address_salt=0,
+            constructor_calldata=[key_pair.public_key, 0],
+            max_fee=int(0.01e18),
+            version=1,
+            nonce=0,
+            chain_id=0x534e5f4d41494e4e4554,  # SN_MAINNET
+        )
+        
+        # Sign with private key
+        signature = message_signature(tx_hash, key_pair.private_key)
+        
         deploy_tx = DeployAccountV1(
             class_hash=class_hash,
             contract_address_salt=0,
