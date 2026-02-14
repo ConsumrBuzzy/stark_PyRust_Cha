@@ -143,19 +143,26 @@ class AccountActivator:
                 signature=signature,
             )
             
-            # Send deployment with max_fee in params
+            # Send deployment using raw RPC call
             deploy_params = {
-                "type": "DEPLOY_ACCOUNT",
-                "version": 1,
-                "max_fee": hex(int(0.01e18)),
-                "signature": [hex(s) for s in signature],
-                "nonce": hex(0),
+                "class_hash": hex(self.argent_proxy_hash),
                 "contract_address_salt": hex(0),
                 "constructor_calldata": [hex(key_pair.public_key), "0x0"],
-                "class_hash": hex(self.argent_proxy_hash),
+                "max_fee": hex(int(0.01e18)),
+                "nonce": hex(0),
+                "signature": [hex(s) for s in signature],
+                "version": 1,
             }
             
-            deploy_result = await client.deploy_account(deploy_params)
+            # Use raw RPC call
+            result = await client._client.call(
+                method="starknet_addDeployAccountTransaction",
+                params={
+                    "deploy_account_transaction": deploy_params
+                }
+            )
+            
+            deploy_result = type('DeployResult', (), {'hash': int(result['transaction_hash'], 16)})()
 
             self.console.print(f"✅ Activation Broadcast: {hex(deploy_result.hash)}")
             self.console.print("⏳ Waiting for transaction acceptance...")
