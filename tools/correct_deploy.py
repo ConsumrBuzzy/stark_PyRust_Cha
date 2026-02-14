@@ -27,8 +27,8 @@ async def deploy_account():
     print(f"📍 Address: {wallet_address}")
     print(f"💰 Balance: 0.014863 ETH")
     
-    # Working QuickNode endpoint
-    rpc_url = "https://docs-demo.strk-mainnet.quiknode.pro/rpc/v0_8"
+    # Try working Alchemy endpoint
+    rpc_url = "https://starknet-mainnet.g.alchemy.com/v2/demo"
     
     # CORRECT: params is an ARRAY, not an object
     payload = {
@@ -52,11 +52,11 @@ async def deploy_account():
                 "resource_bounds": {
                     "l1_gas": {
                         "max_amount": "0x186a0",
-                        "max_price_per_unit": "0x9e8a4a00001"
+                        "max_price_per_unit": "0x9e8a4a00000"
                     },
                     "l1_data_gas": {
                         "max_amount": "0x186a0",
-                        "max_price_per_unit": "0x9e8a4a00001"
+                        "max_price_per_unit": "0x9e8a4a00000"
                     },
                     "l2_gas": {
                         "max_amount": "0x1312d00",
