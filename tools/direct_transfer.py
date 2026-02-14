@@ -40,51 +40,48 @@ async def direct_transfer():
             
             # Create transfer transaction
             transfer_payload = {
-                        "jsonrpc": "2.0",
-                        "method": "starknet_addInvokeTransaction",
-                        "params": [
-                            {
-                                "type": "INVOKE",
-                                "version": "0x1",
-                                "nonce": nonce,
-                                "sender_address": starknet_address,
-                                "calldata": [
-                                    "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",  # ETH contract
-                                    "0x83afd3f4caedc6eebf44246fe54e38c95e3179a5ec9ea81740eca5b482d12e",  # transfer selector
-                                    hex(int(phantom_address, 16)),  # recipient
-                                    "0x5f5e100000000000000000000000000000000000000000000000000",  # 0.013863 ETH
-                                    "0x0"  # padding
-                                ],
-                                "max_fee": "0x59682f00",  # 10 Gwei
-                                "signature": [
-                                    "0x27cc2e9c10794a40bc0fe33dccc778e38b7af81220403a25d662f2ac50e52b1",
-                                    "0x2738c5963a046cafdc64d7105769e9d2a3e5a4d41b7eb57cbe7e0dd7dda97eb"
-                                ],
-                                "nonce_data_availability_mode": "L1",
-                                "fee_data_availability_mode": "L1"
-                            }
+                "jsonrpc": "2.0",
+                "method": "starknet_addInvokeTransaction",
+                "params": [
+                    {
+                        "type": "INVOKE",
+                        "version": "0x1",
+                        "nonce": nonce,
+                        "sender_address": starknet_address,
+                        "calldata": [
+                            "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",  # ETH contract
+                            "0x83afd3f4caedc6eebf44246fe54e38c95e3179a5ec9ea81740eca5b482d12e",  # transfer selector
+                            hex(int(phantom_address, 16)),  # recipient
+                            "0x5f5e100000000000000000000000000000000000000000000000000",  # 0.013863 ETH
+                            "0x0"  # padding
                         ],
-                        "id": 1
+                        "max_fee": "0x59682f00",  # 10 Gwei
+                        "signature": [
+                            "0x27cc2e9c10794a40bc0fe33dccc778e38b7af81220403a25d662f2ac50e52b1",
+                            "0x2738c5963a046cafdc64d7105769e9d2a3e5a4d41b7eb57cbe7e0dd7dda97eb"
+                        ],
+                        "nonce_data_availability_mode": "L1",
+                        "fee_data_availability_mode": "L1"
                     }
-                    
-                    print(f"🔥 Sending transfer transaction...")
-                    print(f"💸 Amount: 0.013863 ETH")
-                    print(f"🎯 To: {phantom_address}")
-                    
-                    async with session.post(rpc_url, headers=headers, data=json.dumps(transfer_payload)) as transfer_response:
-                        transfer_result = await transfer_response.json()
-                        
-                        if 'result' in transfer_result:
-                            tx_hash = transfer_result['result']['transaction_hash']
-                            print(f"✅ Transaction sent!")
-                            print(f"🔗 Hash: {tx_hash}")
-                            print(f"🎉 Transfer initiated!")
-                            return True
-                        else:
-                            print(f"❌ Transfer error: {transfer_result}")
-                            return False
+                ],
+                "id": 1
+            }
+            
+            print(f"🔥 Sending transfer transaction...")
+            print(f"💸 Amount: 0.013863 ETH")
+            print(f"🎯 To: {phantom_address}")
+            
+            async with session.post(rpc_url, headers=headers, data=json.dumps(transfer_payload)) as transfer_response:
+                transfer_result = await transfer_response.json()
+                
+                if 'result' in transfer_result:
+                    tx_hash = transfer_result['result']['transaction_hash']
+                    print(f"✅ Transaction sent!")
+                    print(f"🔗 Hash: {tx_hash}")
+                    print(f"🎉 Transfer initiated!")
+                    return True
                 else:
-                    print(f"❌ Nonce error: {nonce_result}")
+                    print(f"❌ Transfer error: {transfer_result}")
                     return False
                     
     except Exception as e:
