@@ -112,15 +112,23 @@ class AccountActivator:
             # Real activation
             self.console.print("🔥 Attempting account activation...")
 
-            deploy_result = await Account.deploy_account(
+            # Create account instance first
+            account = Account(
                 address=address_int,
-                class_hash=self.argent_proxy_hash,
-                salt=0,
-                key_pair=key_pair,
                 client=client,
+                key_pair=key_pair,
+            )
+            
+            # Deploy the account
+            deploy_result = await account.sign_deploy_transaction(
+                class_hash=self.argent_proxy_hash,
+                contract_address_salt=0,
                 constructor_calldata=[key_pair.public_key, 0],
                 max_fee=int(0.01e18),
             )
+            
+            # Execute deployment
+            deploy_result = await client.send_transaction(deploy_result)
 
             self.console.print(f"✅ Activation Broadcast: {hex(deploy_result.hash)}")
             self.console.print("⏳ Waiting for transaction acceptance...")
