@@ -37,19 +37,32 @@ async def deploy_account():
         "params": [
             {
                 "type": "DEPLOY_ACCOUNT",
-                "version": "0x0",
+                "version": "0x3",
                 "nonce": "0x0",
-                "max_fee": "0x2386f26fc10000",
                 "signature": [
                     "0x27cc2e9c10794a40bc0fe33dccc778e38b7af81220403a25d662f2ac50e52b1",
                     "0x2738c5963a046cafdc64d7105769e9d2a3e5a4d41b7eb57cbe7e0dd7dda97eb"
                 ],
-                "class_hash": "0x6d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b",
                 "contract_address_salt": "0x0",
+                "class_hash": "0x6d44f5b497e5222d3c6fe5158d3b73a575450575b99d2101c5c180d07bc318b",
                 "constructor_calldata": [
                     "0x632d8e811cb6524d0f9381cd19ff4e809b3402fa79237261ac1f2e2cc2a4f31",
                     "0x0"
-                ]
+                ],
+                "resource_bounds": {
+                    "l1_gas": {
+                        "max_amount": "0x28000000000000",
+                        "max_price_per_unit": "0x0"
+                    },
+                    "l2_gas": {
+                        "max_amount": "0x28000000000000", 
+                        "max_price_per_unit": "0x0"
+                    }
+                },
+                "tip": "0x0",
+                "paymaster_data": [],
+                "nonce_data_availability_mode": "L1",
+                "fee_data_availability_mode": "L1"
             }
         ],
         "id": 1
