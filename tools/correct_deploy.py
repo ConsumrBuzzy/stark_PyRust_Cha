@@ -27,8 +27,8 @@ async def deploy_account():
     print(f"📍 Address: {wallet_address}")
     print(f"💰 Balance: 0.014863 ETH")
     
-    # Try working public endpoint
-    rpc_url = "https://starknet-mainnet.public.blastapi.io"
+    # Try Lava protocol endpoint
+    rpc_url = "https://rpc.starknet.lava.build"
     
     # CORRECT: params is an ARRAY, not an object
     payload = {
