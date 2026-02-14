@@ -1,3 +1,20 @@
+# StarkNet Shadow Protocol
+
+A comprehensive StarkNet account management and deployment system.
+
+## 🚨 **CRITICAL SITUATION**
+
+### **Funds Locked Alert**
+- **Amount**: 0.014863 ETH (~$52 USD)
+- **Status**: Locked in undeployed account
+- **Issue**: Cannot deploy due to high gas prices (~42,000 Gwei)
+- **Cost to deploy**: ~24 ETH (not feasible)
+
+### **See Documentation**
+📄 **Full Situation Report**: [docs/STARKNET_FUNDS_LOCKED_SITUATION.md](docs/STARKNET_FUNDS_LOCKED_SITUATION.md)
+
+---
+
 # stark_PyRust_Chain
 
 Public/portfolio-ready refactor with Python 3.12 + Rust (PyO3) engines. Legacy `python-logic/` scripts are thin wrappers or deprecated stubs; core modules are the source of truth.
