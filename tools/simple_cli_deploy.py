@@ -104,7 +104,7 @@ async def deploy_account():
         )
         
         # Sign transaction
-        signature = key_pair.sign_transaction(deploy_tx)
+        signature = key_pair.sign(deploy_tx.hash)
         deploy_tx = DeployAccountV1(
             class_hash=class_hash,
             contract_address_salt=0,
