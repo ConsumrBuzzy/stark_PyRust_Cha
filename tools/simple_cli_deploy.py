@@ -92,18 +92,28 @@ async def deploy_account():
         private_key_int = int(private_key, 16)
         key_pair = KeyPair.from_private_key(private_key_int)
         
-        deploy_tx = DeployAccount(
+        # Create deployment transaction without signature first
+        deploy_tx = DeployAccountV1(
             class_hash=class_hash,
             contract_address_salt=0,
             constructor_calldata=[key_pair.public_key, 0],
             max_fee=int(0.01e18),
             version=1,
             nonce=0,
+            signature=[],
         )
         
         # Sign transaction
         signature = key_pair.sign_transaction(deploy_tx)
-        deploy_tx.signature = signature
+        deploy_tx = DeployAccountV1(
+            class_hash=class_hash,
+            contract_address_salt=0,
+            constructor_calldata=[key_pair.public_key, 0],
+            max_fee=int(0.01e18),
+            version=1,
+            nonce=0,
+            signature=signature,
+        )
         
         print("🔥 Deploying account...")
         
